@@ -2,17 +2,16 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from src.dashboard.components.navigation import sidebar_navigation
 from src.dashboard.components.mermaid import render_mermaid
 from src.dashboard.components.toy_datasets import generate_moons, generate_circles
 
-
 st.set_page_config(page_title="Trees & Forests", page_icon="🌳", layout="wide")
 sidebar_navigation()
 
-st.title("🌳 Decision Trees & Random Forests")
+st.title("🌳 Decision Trees & Random Forests: The Logic of Learning")
 
 tab1, tab2 = st.tabs(["Decision Trees", "Random Forests"])
 
@@ -20,95 +19,102 @@ tab1, tab2 = st.tabs(["Decision Trees", "Random Forests"])
 # DECISION TREES
 # ==========================================
 with tab1:
-    st.header("Decision Trees")
+    st.header("Decision Trees: The '20 Questions' Game")
 
-    # --- 1. Core Model Definition ---
-    st.subheader("1. Core Model Definition")
-    st.markdown("""
-    A Decision Tree is a **Non-Parametric** model that learns a hierarchy of "If-Then" rules.
-    It performs **Recursive Partitioning**: splitting the data into smaller, purer subsets.
-
-    **The Prediction Function:**
-    """)
-    st.latex(r"\hat{y}(x) = \sum_{m=1}^M c_m I(x \in R_m)")
+    # --- 1. Intuition ---
+    st.subheader("1. Intuition: Playing 20 Questions")
     st.markdown(r"""
-    *   $M$: Number of leaf nodes (regions).
-    *   $R_m$: The $m$-th region (box) in the feature space.
-    *   $c_m$: The constant prediction for region $R_m$ (e.g., majority class).
-    *   $I(\cdot)$: Indicator function (1 if $x$ is in $R_m$, else 0).
-    """)
+    Imagine you are playing "20 Questions" to guess if a player will **Win** or **Lose**.
+    You want to ask the *best* question first to narrow it down as fast as possible.
 
-    # --- 2. Geometry / Structure ---
-    st.subheader("2. Geometry: Orthogonal Boundaries")
-    st.markdown(r"""
-    Trees cut the space using **Axis-Aligned Splits** ($x_j \le t$).
-    *   This creates "Boxy" decision boundaries.
-    *   Unlike SVM or Logistic Regression, Trees cannot draw diagonal lines easily (they need a "staircase" to approximate a diagonal).
+    *   **Bad Question**: "Is the wind speed exactly 12.5 km/h?" (Splits data poorly, too specific).
+    *   **Good Question**: "Is the Rank Difference > 50?" (Splits data into two clear groups).
+
+    A Decision Tree is just a machine playing this game perfectly.
     """)
 
     render_mermaid("""
     graph TD
-        Root["Root: Is RankDiff < 0?"] -->|Yes| Left["Node A: Is PointsDiff > 500?"]
-        Root -->|No| Right["Node B: Is Surface = Clay?"]
-        Left -->|Yes| L1["Leaf: WIN"]
-        Left -->|No| L2["Leaf: LOSE"]
-        Right -->|Yes| L3["Leaf: WIN"]
-        Right -->|No| L4["Leaf: LOSE"]
-    """, height=250)
+        Root["Is Rank Diff > 50?"] -->|Yes| Left["Is Surface = Clay?"]
+        Root -->|No| Right["Is Player Height > 190cm?"]
+        Left -->|Yes| L1["Prediction: WIN (90% Prob)"]
+        Left -->|No| L2["Prediction: LOSE (80% Prob)"]
+        Right -->|Yes| L3["Prediction: WIN (60% Prob)"]
+        Right -->|No| L4["Prediction: LOSE (55% Prob)"]
 
-    # --- 3. Constraints / Objective / Loss ---
-    st.subheader("3. The Optimization Problem")
-    st.markdown("""
-    We want to find the split $(j, t)$ that maximizes the **purity** of the child nodes.
-    We use a "Greedy" approach (CART algorithm).
+        style Root fill:#fff3e0
+        style Left fill:#e3f2fd
+        style Right fill:#e3f2fd
+        style L1 fill:#c8e6c9
+        style L2 fill:#ffcdd2
+    """, height=300)
 
-    **The Objective (Maximize Information Gain):**
+    # --- 2. The Math of Messiness (Walkthrough) ---
+    st.subheader("2. How to Choose the Best Question? (Gini Impurity)")
+    st.markdown(r"""
+    The tree needs a metric to measure "Messiness".
+    We use **Gini Impurity**.
+
+    *   **Gini = 0.0**: Perfect Purity (All Wins or All Losses).
+    *   **Gini = 0.5**: Maximum Mess (50% Wins, 50% Losses).
     """)
-    st.latex(r"\max_{j, t} \left[ I(D_p) - \left( \frac{N_{left}}{N_p} I(D_{left}) + \frac{N_{right}}{N_p} I(D_{right}) \right) \right]")
-    st.markdown("""
-    *   $I(D)$: Impurity of a dataset node.
-    *   $N$: Number of samples.
-    *   **Goal**: Make the weighted average impurity of children much lower than the parent.
+
+    st.latex(r"Gini = 1 - \sum (p_i)^2")
+
+    st.markdown("### 🧠 Step-by-Step Walkthrough")
+    st.markdown("Imagine we have 6 matches at a node:")
+    st.code("Matches: [WIN, WIN, WIN, LOSE, LOSE, LOSE]", language="text")
+    st.markdown(r"**Current Gini**: $1 - (3/6)^2 - (3/6)^2 = 1 - 0.25 - 0.25 = \mathbf{0.5}$ (Total Mess).")
+
+    st.markdown("---")
+    st.markdown("**Option A: Split by 'Rank < 100'**")
+    col_a1, col_a2 = st.columns(2)
+    with col_a1:
+        st.markdown("**Left Child (Rank < 100)**")
+        st.code("[WIN, WIN, WIN]", language="text")
+        st.markdown(r"Gini = $1 - (3/3)^2 - (0/3)^2 = \mathbf{0.0}$ (Pure!)")
+    with col_a2:
+        st.markdown("**Right Child (Rank > 100)**")
+        st.code("[LOSE, LOSE, LOSE]", language="text")
+        st.markdown(r"Gini = $1 - (0/3)^2 - (3/3)^2 = \mathbf{0.0}$ (Pure!)")
+    st.success("Weighted Gini = 0.0. This is a PERFECT split!")
+
+    st.markdown("---")
+    st.markdown("**Option B: Split by 'Is Sunny?'**")
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+        st.markdown("**Left Child (Sunny)**")
+        st.code("[WIN, LOSE, WIN]", language="text")
+        st.markdown(r"Gini = $1 - (2/3)^2 - (1/3)^2 \approx \mathbf{0.44}$")
+    with col_b2:
+        st.markdown("**Right Child (Not Sunny)**")
+        st.code("[LOSE, WIN, LOSE]", language="text")
+        st.markdown(r"Gini = $1 - (1/3)^2 - (2/3)^2 \approx \mathbf{0.44}$")
+    st.error("Weighted Gini = 0.44. This split barely helped. The tree will choose Option A.")
+
+    # --- 3. Geometry ---
+    st.subheader("3. Geometry: The Boxy World")
+    st.markdown(r"""
+    Because trees ask questions like $x > 5$, they cut the world into **Rectangles (Boxes)**.
+    They cannot draw a diagonal line directly. They have to approximate it with a "Staircase".
     """)
 
-    # --- 4. Deeper Components (Impurity Metrics) ---
-    st.subheader("4. Impurity Metrics: Gini vs Entropy")
-    st.markdown("How do we measure 'Messiness'?")
-
-    col_gini, col_ent = st.columns(2)
-    with col_gini:
-        st.markdown("**A. Gini Impurity (Default)**")
-        st.latex(r"Gini = 1 - \sum_{k=1}^K p_k^2")
-        st.markdown("""
-        *   Measures probability of misclassification.
-        *   Range: [0, 0.5] (for binary).
-        *   Faster to compute (no logs).
-        """)
-    with col_ent:
-        st.markdown("**B. Entropy (Information Theory)**")
-        st.latex(r"Entropy = - \sum_{k=1}^K p_k \log_2(p_k)")
-        st.markdown("""
-        *   Measures "Surprise" or disorder.
-        *   Range: [0, 1.0] (for binary).
-        *   Tends to produce slightly more balanced trees.
-        """)
-
-    # --- 6. Visualization ---
-    st.subheader("6. Visualization")
+    # --- 4. Visualization ---
+    st.subheader("4. Interactive Visualization")
 
     col_viz, col_controls = st.columns([3, 1])
     with col_controls:
-        depth = st.slider("Max Depth", 1, 10, 3)
-        criterion = st.selectbox("Criterion", ["gini", "entropy"])
+        depth = st.slider("Tree Depth", 1, 15, 1)
         dataset = st.selectbox("Dataset", ["Moons", "Circles"], key="tree_data")
+        st.caption("Increase Depth to see the 'Staircase' effect on curved data.")
 
     with col_viz:
         if dataset == "Moons":
-            X, y = generate_moons(n_samples=200, noise=0.2)
+            X, y = generate_moons(n_samples=300, noise=0.2)
         else:
-            X, y = generate_circles(n_samples=200, noise=0.1)
+            X, y = generate_circles(n_samples=300, noise=0.1)
 
-        clf = DecisionTreeClassifier(max_depth=depth, criterion=criterion)
+        clf = DecisionTreeClassifier(max_depth=depth)
         clf.fit(X, y)
 
         # Grid
@@ -132,55 +138,52 @@ with tab1:
 # RANDOM FORESTS
 # ==========================================
 with tab2:
-    st.header("Random Forests")
+    st.header("Random Forests: The Wisdom of the Crowd")
 
-    # --- 1. Core Model Definition ---
-    st.subheader("1. Core Model Definition")
-    st.markdown("""
-    A Random Forest is an **Ensemble** of Decision Trees. It uses **Bagging** (Bootstrap Aggregating) to reduce variance.
-
-    **The Prediction:**
-    """)
-    st.latex(r"\hat{y}_{RF}(x) = \text{mode} \{ \hat{y}_1(x), \hat{y}_2(x), \dots, \hat{y}_B(x) \}")
-    st.markdown("It takes a **Majority Vote** of $B$ trees.")
-
-    # --- 3. Optimization (Variance Reduction) ---
-    st.subheader("3. Why it Works: Variance Reduction")
-    st.markdown("""
-    A single tree is **High Variance** (unstable). If you change one data point, the whole tree might change.
-    A Forest averages out these errors.
-
-    **Variance of the Average:**
-    """)
-    st.latex(r"Var(\bar{X}) = \rho \sigma^2 + \frac{1-\rho}{B} \sigma^2")
+    # --- 1. Intuition ---
+    st.subheader("1. Intuition: Ask 100 Friends")
     st.markdown(r"""
-    *   $\sigma^2$: Variance of a single tree.
-    *   $B$: Number of trees.
-    *   $\rho$: Correlation between trees.
-    *   **Goal**: Reduce $\rho$ (make trees diverse) and increase $B$.
+    A single Decision Tree is like **one smart but erratic expert**.
+    *   If you change the data slightly, the tree might change completely (High Variance).
+    *   It might memorize the specific noise of the training set (Overfitting).
+
+    **The Solution**: Ask 100 experts.
+    *   **Diversity**: Make sure each expert sees slightly different data (Bootstrapping).
+    *   **Constraint**: Make sure each expert looks at different clues (Feature Randomness).
+    *   **Vote**: Take the majority vote.
+
+    This is called **Bagging** (Bootstrap Aggregating).
     """)
 
-    # --- 4. Deeper Components (Randomness) ---
-    st.subheader("4. Injecting Randomness")
+    # --- 2. The Math of Ensembling ---
+    st.subheader("2. Why does averaging work?")
     st.markdown(r"""
-    To make trees diverse (low $\rho$), we inject randomness in two places:
-    1.  **Bootstrapping**: Each tree sees a random subset of the data (with replacement).
-    2.  **Feature Randomness**: At each split, the tree can only choose from a random subset of features (e.g., $\sqrt{p}$ features).
+    If errors are random and uncorrelated, averaging them cancels them out.
+
+    **Variance of the Forest**:
+    """)
+    st.latex(r"Var(\text{Forest}) = \rho \sigma^2 + \frac{1-\rho}{B} \sigma^2")
+    st.markdown(r"""
+    *   $\sigma^2$: Variance of one tree (High).
+    *   $B$: Number of trees (High is good).
+    *   $\rho$: Correlation between trees (Low is good).
+
+    **Key Takeaway**: We want **many** trees ($B \uparrow$) that are **different** from each other ($\rho \downarrow$).
     """)
 
-    # --- 6. Visualization ---
-    st.subheader("6. Visualization")
+    # --- 3. Visualization ---
+    st.subheader("3. Interactive Visualization")
 
     col_viz_rf, col_controls_rf = st.columns([3, 1])
     with col_controls_rf:
-        n_estimators = st.slider("Num Trees", 1, 50, 10)
+        n_estimators = st.slider("Num Trees", 1, 100, 10)
         dataset_rf = st.selectbox("Dataset", ["Moons", "Circles"], key="rf_data")
 
     with col_viz_rf:
         if dataset_rf == "Moons":
-            X_rf, y_rf = generate_moons(n_samples=200, noise=0.2)
+            X_rf, y_rf = generate_moons(n_samples=300, noise=0.25)
         else:
-            X_rf, y_rf = generate_circles(n_samples=200, noise=0.1)
+            X_rf, y_rf = generate_circles(n_samples=300, noise=0.15)
 
         clf_rf = RandomForestClassifier(n_estimators=n_estimators, random_state=42)
         clf_rf.fit(X_rf, y_rf)
@@ -204,9 +207,9 @@ with tab2:
 
     # --- 8. Super Summary ---
     st.subheader("8. Super Summary 🦸")
-    st.info("""
-    *   **Goal**: Partition space into pure boxes.
-    *   **Math**: Maximize Information Gain (Gini/Entropy).
-    *   **Key Insight**: Trees are "Boxy". Forests smooth out the boxes by averaging.
-    *   **Knobs**: Depth (Complexity), Num Trees (Stability).
+    st.info(r"""
+    *   **Decision Tree**: A set of If-Then rules (20 Questions).
+    *   **Gini Impurity**: The math behind "Good Questions".
+    *   **Random Forest**: A democracy of trees.
+    *   **Key Insight**: Averaging many "okay" models creates one "super" model.
     """)
