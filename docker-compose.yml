@@ -1,0 +1,23 @@
+version: '3.8'
+services:
+  service:
+    build:
+      context: .
+      dockerfile: ./services/service/Dockerfile
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./models:/app/models
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: ./services/dashboard/Dockerfile
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./models:/app/models
+      - ./atp_tennis.csv:/app/atp_tennis.csv
+      - ./src:/app/src
+    restart: unless-stopped

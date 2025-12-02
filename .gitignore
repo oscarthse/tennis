@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Data (Optional: exclude if you want to download it in the app, but for now we include it)
+# atp_tennis.csv
+
+# Models (Optional: exclude if too large, but 50MB is fine)
+# models/*.pkl
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Streamlit
+.streamlit/secrets.toml
