@@ -1,92 +1,97 @@
 import streamlit as st
 import numpy as np
-import pandas as pd
 import plotly.graph_objects as go
-from sklearn.metrics import confusion_matrix, roc_curve, auc
+from sklearn.metrics import roc_curve, precision_recall_curve, confusion_matrix
 from src.dashboard.components.navigation import sidebar_navigation
+from src.dashboard.components.toy_datasets import generate_moons
 
 st.set_page_config(page_title="Validation & Metrics", page_icon="✅", layout="wide")
 sidebar_navigation()
 
-st.title("✅ Validation & Metrics: Keeping it Real")
+st.title("✅ Validation & Metrics")
 
-# --- LAYER 1: Intuition ---
-st.header("1. Intuition: The Exam 📝")
+# --- 1. Core Model Definition ---
+st.header("1. Core Model Definition")
 st.markdown("""
-Training a model is like studying.
-*   **Training Set**: The textbook questions. (You can memorize these).
-*   **Test Set**: The final exam questions. (You've never seen these).
-*   **Accuracy**: Getting 90% right.
-*   **Precision/Recall**: What if the exam is 99% "True" and 1% "False"? Guessing "True" gets you 99% accuracy but you learned nothing. We need better metrics.
+Accuracy is not enough. We need to understand **how** the model is wrong.
+The foundation of all metrics is the **Confusion Matrix**.
+
+**The Four Outcomes:**
+*   **True Positive (TP)**: Predicted Win, Actually Win. (Correct)
+*   **False Positive (FP)**: Predicted Win, Actually Lose. (Type I Error / False Alarm).
+*   **False Negative (FN)**: Predicted Lose, Actually Win. (Type II Error / Miss).
+*   **True Negative (TN)**: Predicted Lose, Actually Lose. (Correct).
 """)
-st.markdown("---")
 
-# --- LAYER 3: Structure ---
-st.header("3. Structure: The Confusion Matrix 🔲")
-st.markdown("Every prediction falls into one of 4 buckets:")
-col1, col2 = st.columns(2)
-with col1:
-    st.success("**True Positive (TP)**: Predicted Win, Actually Win.")
-    st.error("**False Positive (FP)**: Predicted Win, Actually Lose. (Type I Error).")
-with col2:
-    st.error("**False Negative (FN)**: Predicted Lose, Actually Win. (Type II Error).")
-    st.success("**True Negative (TN)**: Predicted Lose, Actually Lose.")
-st.markdown("---")
+# --- 2. Geometry / Structure ---
+st.header("2. Geometry: The Threshold Slider")
+st.markdown("""
+Most models output a probability (e.g., 0.7). We need a **Threshold** (usually 0.5) to make a decision.
+*   If $p > T$: Predict Positive.
+*   If $p < T$: Predict Negative.
 
-# --- LAYER 5: Full Math ---
-st.header("5. The Math: Precision, Recall, F1 🧮")
+Moving this threshold $T$ trades off FPs and FNs.
+*   **Low Threshold (0.1)**: Predict "Win" aggressively. High Recall, Low Precision. (Catch all wins, but many false alarms).
+*   **High Threshold (0.9)**: Predict "Win" conservatively. High Precision, Low Recall. (Only bet on sure things).
+""")
 
-st.subheader("A. Precision (Quality)")
-st.markdown("Of all the matches I *said* were Wins, how many were actually Wins?")
-st.latex(r"Precision = \frac{TP}{TP + FP}")
-
-st.subheader("B. Recall (Quantity)")
-st.markdown("Of all the *actual* Wins, how many did I find?")
-st.latex(r"Recall = \frac{TP}{TP + FN}")
-
-st.subheader("C. F1 Score (Harmonic Mean)")
-st.markdown("Why not just average P and R? Because if P=0.01 and R=1.0, the average is 0.5 (misleading).")
-st.markdown("The **Harmonic Mean** punishes extreme values.")
-st.latex(r"F1 = 2 \cdot \frac{P \cdot R}{P + R}")
-
-st.subheader("D. ROC & AUC")
-st.markdown("ROC plots **True Positive Rate** vs **False Positive Rate** at *every possible threshold*.")
-st.markdown("**AUC (Area Under Curve)**: The probability that the model ranks a random Positive example higher than a random Negative example.")
-st.markdown("---")
-
-# --- Interactive Viz ---
-st.header("10. Interactive Playground")
-
-# Generate synthetic data
-y_true = np.random.randint(0, 2, 100)
-y_scores = np.random.rand(100)
-# Add some signal
-y_scores = y_scores + (y_true * 0.5)
-y_scores = y_scores / y_scores.max()
-
-threshold = st.slider("Decision Threshold", 0.0, 1.0, 0.5)
-y_pred = (y_scores >= threshold).astype(int)
-
-cm = confusion_matrix(y_true, y_pred)
+# --- 3. Constraints / Objective / Loss ---
+st.header("3. The Metrics")
+st.markdown("We define derived metrics to capture specific behaviors.")
 
 col1, col2 = st.columns(2)
 with col1:
-    st.markdown("### Confusion Matrix")
-    fig_cm = go.Figure(data=go.Heatmap(
-        z=cm, x=['Pred 0', 'Pred 1'], y=['Actual 0', 'Actual 1'],
-        text=cm, texttemplate="%{text}", colorscale='Blues'
-    ))
-    st.plotly_chart(fig_cm, use_container_width=True)
+    st.subheader("Precision")
+    st.latex(r"\text{Precision} = \frac{TP}{TP + FP}")
+    st.markdown("**Interpretation**: When the model says 'Win', how often is it right? (Trustworthiness).")
 
 with col2:
-    st.markdown("### ROC Curve")
-    fpr, tpr, _ = roc_curve(y_true, y_scores)
-    roc_auc = auc(fpr, tpr)
+    st.subheader("Recall (Sensitivity)")
+    st.latex(r"\text{Recall} = \frac{TP}{TP + FN}")
+    st.markdown("**Interpretation**: Out of all actual Wins, how many did we find? (Coverage).")
 
-    fig_roc = go.Figure()
-    fig_roc.add_trace(go.Scatter(x=fpr, y=tpr, name=f'AUC = {roc_auc:.2f}'))
-    fig_roc.add_trace(go.Scatter(x=[0, 1], y=[0, 1], line=dict(dash='dash'), name='Random'))
-    fig_roc.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='markers', marker=dict(color='red', size=10), name='Current Threshold')) # Placeholder for point
-    st.plotly_chart(fig_roc, use_container_width=True)
+st.subheader("F1 Score")
+st.latex(r"F1 = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}")
+st.markdown("The Harmonic Mean. It punishes extreme values (e.g., if Precision is 0, F1 is 0).")
 
-st.page_link("pages/02_model_playground.py", label="🎮 Go to Playground", icon="🎮")
+# --- 6. Visualization ---
+st.header("6. Visualization: ROC & PR Curves")
+
+col_viz, col_controls = st.columns([3, 1])
+with col_controls:
+    noise = st.slider("Noise", 0.1, 1.0, 0.5)
+    imbalance = st.slider("Imbalance (Ratio 0:1)", 0.1, 0.9, 0.5)
+
+with col_viz:
+    # Generate Data
+    n_samples = 500
+    n_class1 = int(n_samples * imbalance)
+    n_class0 = n_samples - n_class1
+
+    # Simple synthetic scores
+    # Class 0: N(0, 1), Class 1: N(1 + noise, 1)
+    scores_0 = np.random.normal(0, 1, n_class0)
+    scores_1 = np.random.normal(2 - noise, 1, n_class1)
+
+    y_true = np.concatenate([np.zeros(n_class0), np.ones(n_class1)])
+    y_scores = np.concatenate([scores_0, scores_1])
+
+    # ROC
+    fpr, tpr, thresholds = roc_curve(y_true, y_scores)
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=fpr, y=tpr, mode='lines', name='ROC Curve', line=dict(color='blue', width=3)))
+    fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Random', line=dict(dash='dash', color='gray')))
+    fig.update_layout(title="ROC Curve", xaxis_title="False Positive Rate (1-Specificity)", yaxis_title="True Positive Rate (Recall)", height=500)
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.caption("Top-Left is best (High TPR, Low FPR).")
+
+# --- 8. Super Summary ---
+st.header("8. Super Summary 🦸")
+st.info("""
+*   **Goal**: Evaluate model performance beyond simple accuracy.
+*   **Math**: Precision ($TP/PredP$), Recall ($TP/TrueP$).
+*   **Key Insight**: There is always a trade-off between Precision and Recall. You choose it by setting the Threshold.
+*   **Knobs**: The Decision Threshold.
+""")

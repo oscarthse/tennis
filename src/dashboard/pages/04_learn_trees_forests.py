@@ -2,220 +2,211 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import RandomForestClassifier
 from src.dashboard.components.navigation import sidebar_navigation
-from src.dashboard.components.model_cards import render_model_card
-from src.dashboard.components.toy_datasets import generate_moons, generate_circles
 from src.dashboard.components.mermaid import render_mermaid
+from src.dashboard.components.toy_datasets import generate_moons, generate_circles
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Trees & Forests", page_icon="🌳", layout="wide")
 sidebar_navigation()
 
 st.title("🌳 Decision Trees & Random Forests")
 
-# --- LAYER 1: Super Simple Intuition ---
-st.header("1. Intuition: The Game of 20 Questions ❓")
-st.markdown("""
-Imagine you are playing "20 Questions". You want to guess what animal I am thinking of.
-*   **Bad Question**: "Is it a Zebra?" (Too specific, likely "No", doesn't help much).
-*   **Good Question**: "Is it a Mammal?" (Splits the possibilities in half).
+tab1, tab2 = st.tabs(["Decision Trees", "Random Forests"])
 
-A **Decision Tree** plays this game with data. It tries to find the **best possible question** to ask at every step to separate the Winners from the Losers.
-""")
+# ==========================================
+# DECISION TREES
+# ==========================================
+with tab1:
+    st.header("Decision Trees")
 
-st.markdown("---")
+    # --- 1. Core Model Definition ---
+    st.subheader("1. Core Model Definition")
+    st.markdown("""
+    A Decision Tree is a **Non-Parametric** model that learns a hierarchy of "If-Then" rules.
+    It performs **Recursive Partitioning**: splitting the data into smaller, purer subsets.
 
-# --- LAYER 2: Real-World Analogy ---
-st.header("2. Analogy: The Doctor's Diagnosis 🩺")
-st.markdown("""
-A doctor diagnosing a patient follows a tree:
-1.  **"Do you have a fever?"**
-    *   **No**: "Does your knee hurt?" -> (Orthopedics)
-    *   **Yes**: "Do you have a cough?"
-        *   **Yes**: (Flu)
-        *   **No**: (Infection)
+    **The Prediction Function:**
+    """)
+    st.latex(r"\hat{y}(x) = \sum_{m=1}^M c_m I(x \in R_m)")
+    st.markdown("""
+    *   $M$: Number of leaf nodes (regions).
+    *   $R_m$: The $m$-th region (box) in the feature space.
+    *   $c_m$: The constant prediction for region $R_m$ (e.g., majority class).
+    *   $I(\cdot)$: Indicator function (1 if $x$ is in $R_m$, else 0).
+    """)
 
-At each step, the group of patients gets smaller and more similar (**purer**). The goal is to reach a "Leaf" where everyone has the same condition.
-""")
+    # --- 2. Geometry / Structure ---
+    st.subheader("2. Geometry: Orthogonal Boundaries")
+    st.markdown("""
+    Trees cut the space using **Axis-Aligned Splits** ($x_j \le t$).
+    *   This creates "Boxy" decision boundaries.
+    *   Unlike SVM or Logistic Regression, Trees cannot draw diagonal lines easily (they need a "staircase" to approximate a diagonal).
+    """)
 
-st.markdown("---")
+    render_mermaid("""
+    graph TD
+        Root["Root: Is RankDiff < 0?"] -->|Yes| Left["Node A: Is PointsDiff > 500?"]
+        Root -->|No| Right["Node B: Is Surface = Clay?"]
+        Left -->|Yes| L1["Leaf: WIN"]
+        Left -->|No| L2["Leaf: LOSE"]
+        Right -->|Yes| L3["Leaf: WIN"]
+        Right -->|No| L4["Leaf: LOSE"]
+    """, height=250)
 
-# --- LAYER 3: Structural Explanation ---
-st.header("3. Structure: Nodes and Leaves 🌿")
-render_mermaid("""
-graph TD
-    Root["Root Node <br> (All Data)"] -->|Split Condition| Node1["Internal Node"]
-    Root -->|Split Condition| Node2["Internal Node"]
-    Node1 --> Leaf1["Leaf Node <br> (Prediction: Win)"]
-    Node1 --> Leaf2["Leaf Node <br> (Prediction: Lose)"]
+    # --- 3. Constraints / Objective / Loss ---
+    st.subheader("3. The Optimization Problem")
+    st.markdown("""
+    We want to find the split $(j, t)$ that maximizes the **purity** of the child nodes.
+    We use a "Greedy" approach (CART algorithm).
 
-    style Root fill:#e3f2fd
-    style Leaf1 fill:#c8e6c9
-    style Leaf2 fill:#ffcdd2
-""", height=300)
+    **The Objective (Maximize Information Gain):**
+    """)
+    st.latex(r"\max_{j, t} \left[ I(D_p) - \left( \frac{N_{left}}{N_p} I(D_{left}) + \frac{N_{right}}{N_p} I(D_{right}) \right) \right]")
+    st.markdown("""
+    *   $I(D)$: Impurity of a dataset node.
+    *   $N$: Number of samples.
+    *   **Goal**: Make the weighted average impurity of children much lower than the parent.
+    """)
 
-st.markdown("""
-*   **Root**: The starting point (all data).
-*   **Split**: A question (e.g., `Rank < 10`).
-*   **Leaf**: The end of the line. We make a prediction here (e.g., "Win").
-*   **Impurity**: A measure of how "mixed" a node is. We want to minimize this.
-""")
+    # --- 4. Deeper Components (Impurity Metrics) ---
+    st.subheader("4. Impurity Metrics: Gini vs Entropy")
+    st.markdown("How do we measure 'Messiness'?")
 
-st.markdown("---")
+    col_gini, col_ent = st.columns(2)
+    with col_gini:
+        st.markdown("**A. Gini Impurity (Default)**")
+        st.latex(r"Gini = 1 - \sum_{k=1}^K p_k^2")
+        st.markdown("""
+        *   Measures probability of misclassification.
+        *   Range: [0, 0.5] (for binary).
+        *   Faster to compute (no logs).
+        """)
+    with col_ent:
+        st.markdown("**B. Entropy (Information Theory)**")
+        st.latex(r"Entropy = - \sum_{k=1}^K p_k \log_2(p_k)")
+        st.markdown("""
+        *   Measures "Surprise" or disorder.
+        *   Range: [0, 1.0] (for binary).
+        *   Tends to produce slightly more balanced trees.
+        """)
 
-# --- LAYER 4: Step-by-Step Breakdown ---
-st.header("4. Step-by-Step Construction 🧱")
-st.markdown("Let's build a tree manually using a tiny dataset.")
+    # --- 6. Visualization ---
+    st.subheader("6. Visualization")
 
-toy_data = pd.DataFrame({
-    'Match': [1, 2, 3, 4, 5, 6],
-    'RankDiff': [10, -5, 20, 50, -2, 5],
-    'Surface': ['Clay', 'Grass', 'Clay', 'Hard', 'Grass', 'Hard'],
-    'Winner': ['Win', 'Win', 'Lose', 'Lose', 'Win', 'Lose']
-})
-st.dataframe(toy_data, use_container_width=True)
+    col_viz, col_controls = st.columns([3, 1])
+    with col_controls:
+        depth = st.slider("Max Depth", 1, 10, 3)
+        criterion = st.selectbox("Criterion", ["gini", "entropy"])
+        dataset = st.selectbox("Dataset", ["Moons", "Circles"], key="tree_data")
 
-st.markdown("""
-**Goal**: Separate 3 Wins and 3 Losses.
-**Current State**: 3W, 3L. (50/50 Mix).
-""")
+    with col_viz:
+        if dataset == "Moons":
+            X, y = generate_moons(n_samples=200, noise=0.2)
+        else:
+            X, y = generate_circles(n_samples=200, noise=0.1)
 
-st.subheader("Step 1: Calculate Root Impurity")
-st.latex(r"Gini = 1 - (p_{win}^2 + p_{loss}^2) = 1 - (0.5^2 + 0.5^2) = 0.5")
+        clf = DecisionTreeClassifier(max_depth=depth, criterion=criterion)
+        clf.fit(X, y)
 
-st.subheader("Step 2: Test Split A (Surface = Clay)")
-st.markdown("""
-*   **Left (Clay)**: Match 1 (Win), Match 3 (Lose). -> 1W, 1L. (Gini = 0.5).
-*   **Right (Not Clay)**: 2W, 2L. (Gini = 0.5).
-*   **Result**: No improvement. Bad split.
-""")
+        # Grid
+        x_min, x_max = X[:, 0].min() - 0.5, X[:, 0].max() + 0.5
+        y_min, y_max = X[:, 1].min() - 0.5, X[:, 1].max() + 0.5
+        xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.02), np.arange(y_min, y_max, 0.02))
 
-st.subheader("Step 3: Test Split B (RankDiff < 0)")
-st.markdown("""
-*   **Left (RankDiff < 0)**: Match 2 (-5), Match 5 (-2). -> **2 Wins, 0 Losses**.
-    *   Gini = $1 - (1.0^2 + 0.0^2) = 0.0$. (**Perfectly Pure!**)
-*   **Right (RankDiff >= 0)**: Match 1, 3, 4, 6. -> **1 Win, 3 Losses**.
-    *   Gini = $1 - (0.25^2 + 0.75^2) = 0.375$.
-""")
+        Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
+        Z = Z.reshape(xx.shape)
 
-st.subheader("Step 4: Choose Best Split")
-st.success("Split B reduces impurity significantly. The Tree chooses 'RankDiff < 0' as the Root Question.")
+        fig = go.Figure()
+        fig.add_trace(go.Contour(x=np.arange(x_min, x_max, 0.02), y=np.arange(y_min, y_max, 0.02), z=Z,
+                                 colorscale='RdBu', opacity=0.4, showscale=False))
+        fig.add_trace(go.Scatter(x=X[y==0, 0], y=X[y==0, 1], mode='markers', name='Class 0', marker=dict(color='red')))
+        fig.add_trace(go.Scatter(x=X[y==1, 0], y=X[y==1, 1], mode='markers', name='Class 1', marker=dict(color='blue')))
 
-st.markdown("---")
+        fig.update_layout(title=f"Decision Tree (Depth={depth})", height=500)
+        st.plotly_chart(fig, use_container_width=True)
 
-# --- LAYER 5: Full Math ---
-st.header("5. The Math: Entropy & Gini 🧮")
+# ==========================================
+# RANDOM FORESTS
+# ==========================================
+with tab2:
+    st.header("Random Forests")
 
-st.subheader("A. Gini Impurity (The Standard)")
-st.markdown("Used by CART (Classification and Regression Trees). It measures the probability of misclassifying a randomly chosen element.")
-st.latex(r"Gini(D) = 1 - \sum_{i=1}^C p_i^2")
+    # --- 1. Core Model Definition ---
+    st.subheader("1. Core Model Definition")
+    st.markdown("""
+    A Random Forest is an **Ensemble** of Decision Trees. It uses **Bagging** (Bootstrap Aggregating) to reduce variance.
 
-st.subheader("B. Entropy (Information Theory)")
-st.markdown("Used by ID3/C4.5. Measures the amount of 'surprise' or 'disorder'.")
-st.latex(r"Entropy(D) = - \sum_{i=1}^C p_i \log_2(p_i)")
+    **The Prediction:**
+    """)
+    st.latex(r"\hat{y}_{RF}(x) = \text{mode} \{ \hat{y}_1(x), \hat{y}_2(x), \dots, \hat{y}_B(x) \}")
+    st.markdown("It takes a **Majority Vote** of $B$ trees.")
 
-st.subheader("C. Information Gain")
-st.markdown("The improvement achieved by a split.")
-st.latex(r"Gain = I(Parent) - \sum \frac{N_{child}}{N_{parent}} I(Child)")
-st.markdown("We maximize this Gain.")
+    # --- 3. Optimization (Variance Reduction) ---
+    st.subheader("3. Why it Works: Variance Reduction")
+    st.markdown("""
+    A single tree is **High Variance** (unstable). If you change one data point, the whole tree might change.
+    A Forest averages out these errors.
 
-st.subheader("D. Random Forest Variance")
-st.markdown("Why do Forests work better? Variance Reduction.")
-st.latex(r"Var(\text{Forest}) = \rho \sigma^2 + \frac{1-\rho}{n} \sigma^2")
-st.markdown("""
-*   $\sigma^2$: Variance of one tree.
-*   $n$: Number of trees.
-*   $\rho$: Correlation between trees.
-*   **Bootstrapping** and **Random Features** reduce $\rho$, making the forest stronger.
-""")
+    **Variance of the Average:**
+    """)
+    st.latex(r"Var(\bar{X}) = \rho \sigma^2 + \frac{1-\rho}{B} \sigma^2")
+    st.markdown("""
+    *   $\sigma^2$: Variance of a single tree.
+    *   $B$: Number of trees.
+    *   $\rho$: Correlation between trees.
+    *   **Goal**: Reduce $\rho$ (make trees diverse) and increase $B$.
+    """)
 
-st.markdown("---")
+    # --- 4. Deeper Components (Randomness) ---
+    st.subheader("4. Injecting Randomness")
+    st.markdown("""
+    To make trees diverse (low $\rho$), we inject randomness in two places:
+    1.  **Bootstrapping**: Each tree sees a random subset of the data (with replacement).
+    2.  **Feature Randomness**: At each split, the tree can only choose from a random subset of features (e.g., $\sqrt{p}$ features).
+    """)
 
-# --- LAYER 6: Diagrams ---
-st.header("6. Visualization: Forest Voting 🗳️")
-render_mermaid("""
-graph LR
-    Input["New Match"] --> T1
-    Input --> T2
-    Input --> T3
+    # --- 6. Visualization ---
+    st.subheader("6. Visualization")
 
-    subgraph Forest
-        T1["Tree 1"] -->|Vote| V1["Win"]
-        T2["Tree 2"] -->|Vote| V2["Lose"]
-        T3["Tree 3"] -->|Vote| V3["Win"]
-    end
+    col_viz_rf, col_controls_rf = st.columns([3, 1])
+    with col_controls_rf:
+        n_estimators = st.slider("Num Trees", 1, 50, 10)
+        dataset_rf = st.selectbox("Dataset", ["Moons", "Circles"], key="rf_data")
 
-    V1 --> Final["Majority Vote: <br> WIN"]
-    V2 --> Final
-    V3 --> Final
-""", height=300)
+    with col_viz_rf:
+        if dataset_rf == "Moons":
+            X_rf, y_rf = generate_moons(n_samples=200, noise=0.2)
+        else:
+            X_rf, y_rf = generate_circles(n_samples=200, noise=0.1)
 
-st.markdown("---")
+        clf_rf = RandomForestClassifier(n_estimators=n_estimators, random_state=42)
+        clf_rf.fit(X_rf, y_rf)
 
-# --- LAYER 7: Micro-Examples ---
-st.header("7. Micro-Examples 🧪")
-st.markdown("**Example: Entropy of a Coin Toss**")
-st.markdown("*   **Fair Coin (50/50)**: $p=0.5$. Entropy = $-0.5 \log_2(0.5) - 0.5 \log_2(0.5) = 1.0$ (Max Uncertainty).")
-st.markdown("*   **Rigged Coin (100/0)**: $p=1.0$. Entropy = $-1 \log_2(1) = 0$ (Zero Uncertainty).")
+        # Grid
+        x_min_rf, x_max_rf = X_rf[:, 0].min() - 0.5, X_rf[:, 0].max() + 0.5
+        y_min_rf, y_max_rf = X_rf[:, 1].min() - 0.5, X_rf[:, 1].max() + 0.5
+        xx_rf, yy_rf = np.meshgrid(np.arange(x_min_rf, x_max_rf, 0.02), np.arange(y_min_rf, y_max_rf, 0.02))
 
-st.markdown("---")
+        Z_rf = clf_rf.predict(np.c_[xx_rf.ravel(), yy_rf.ravel()])
+        Z_rf = Z_rf.reshape(xx_rf.shape)
 
-# --- LAYER 8: FAQ ---
-st.header("8. FAQ 🙋")
-with st.expander("Q: How deep should the tree be?"):
-    st.markdown("Deep trees (depth=20) memorize data (Overfitting). Shallow trees (depth=2) are too simple (Underfitting). We usually tune this parameter.")
-with st.expander("Q: Why random features in Forests?"):
-    st.markdown("If we didn't use random features, every tree would pick the 'Best' feature (e.g., Rank) at the top. All trees would look the same. Randomness forces them to look at other features, creating diversity.")
+        fig_rf = go.Figure()
+        fig_rf.add_trace(go.Contour(x=np.arange(x_min_rf, x_max_rf, 0.02), y=np.arange(y_min_rf, y_max_rf, 0.02), z=Z_rf,
+                                    colorscale='RdBu', opacity=0.4, showscale=False))
+        fig_rf.add_trace(go.Scatter(x=X_rf[y_rf==0, 0], y=X_rf[y_rf==0, 1], mode='markers', marker=dict(color='red')))
+        fig_rf.add_trace(go.Scatter(x=X_rf[y_rf==1, 0], y=X_rf[y_rf==1, 1], mode='markers', marker=dict(color='blue')))
 
-st.markdown("---")
+        fig_rf.update_layout(title=f"Random Forest ({n_estimators} Trees)", height=500)
+        st.plotly_chart(fig_rf, use_container_width=True)
 
-# --- LAYER 9: Exercises ---
-st.header("9. Exercises 📝")
-st.info("""
-1.  **Calculate**: A node has 4 Wins and 0 Losses. What is its Gini? (Hint: $1 - (1^2 + 0^2)$)
-2.  **Draw**: Draw a tree for deciding "Should I bring an umbrella?" (Rain? -> Yes/No).
-3.  **Think**: If you have 1000 identical trees, is the Forest better than 1 tree? (Hint: Look at the variance formula).
-""")
-
-st.markdown("---")
-
-# --- Interactive Playground ---
-st.header("10. Interactive Playground")
-
-col1, col2 = st.columns([1, 3])
-with col1:
-    dataset_type = st.selectbox("Dataset", ["Moons", "Circles"])
-    noise = st.slider("Noise", 0.0, 1.0, 0.3)
-    model_type = st.radio("Model", ["Decision Tree", "Random Forest"])
-    max_depth = st.slider("Max Depth", 1, 20, 5)
-    n_estimators = st.slider("Trees", 1, 100, 10) if model_type == "Random Forest" else 1
-
-with col2:
-    if dataset_type == "Moons":
-        X, y = generate_moons(noise=noise)
-    else:
-        X, y = generate_circles(noise=noise)
-
-    if model_type == "Decision Tree":
-        clf = DecisionTreeClassifier(max_depth=max_depth, random_state=42)
-    else:
-        clf = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, random_state=42)
-
-    clf.fit(X, y)
-
-    # Plot
-    x_min, x_max = X[:, 0].min() - 0.5, X[:, 0].max() + 0.5
-    y_min, y_max = X[:, 1].min() - 0.5, X[:, 1].max() + 0.5
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.02), np.arange(y_min, y_max, 0.02))
-    Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
-    Z = Z.reshape(xx.shape)
-
-    fig = go.Figure()
-    fig.add_trace(go.Contour(x=np.arange(x_min, x_max, 0.02), y=np.arange(y_min, y_max, 0.02), z=Z, colorscale='RdBu', opacity=0.4, showscale=False))
-    fig.add_trace(go.Scatter(x=X[y==0, 0], y=X[y==0, 1], mode='markers', name='Class 0', marker=dict(color='red')))
-    fig.add_trace(go.Scatter(x=X[y==1, 0], y=X[y==1, 1], mode='markers', name='Class 1', marker=dict(color='blue')))
-    fig.update_layout(title=f"{model_type} Boundary", height=500)
-    st.plotly_chart(fig, use_container_width=True)
-
-st.page_link("pages/02_model_playground.py", label="🎮 Go to Playground", icon="🎮")
+    # --- 8. Super Summary ---
+    st.subheader("8. Super Summary 🦸")
+    st.info("""
+    *   **Goal**: Partition space into pure boxes.
+    *   **Math**: Maximize Information Gain (Gini/Entropy).
+    *   **Key Insight**: Trees are "Boxy". Forests smooth out the boxes by averaging.
+    *   **Knobs**: Depth (Complexity), Num Trees (Stability).
+    """)

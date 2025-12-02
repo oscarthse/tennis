@@ -1,51 +1,88 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
+from sklearn.svm import SVC
 from src.dashboard.components.navigation import sidebar_navigation
+from src.dashboard.components.toy_datasets import generate_moons
 
-st.set_page_config(page_title="Class Imbalance", page_icon="⚖️", layout="wide")
+st.set_page_config(page_title="Class Imbalance", page_icon="⚖", layout="wide")
 sidebar_navigation()
 
-st.title("⚖️ Class Imbalance: The needle in the haystack")
+st.title("⚖ Class Imbalance")
 
-# --- LAYER 1: Intuition ---
-st.header("1. Intuition: The Lazy Student 😴")
+# --- 1. Core Model Definition ---
+st.header("1. Core Model Definition")
 st.markdown("""
-Imagine a test with 100 questions.
-*   99 questions are "False".
-*   1 question is "True".
+In many problems (Fraud, Disease, Betting), one class is much rarer than the other.
+*   **Majority Class**: The common one (e.g., "Not Fraud").
+*   **Minority Class**: The rare one (e.g., "Fraud").
 
-A lazy student can just answer "False" to everything and get **99% Accuracy**.
-But they failed to find the one thing that mattered.
-
-In Tennis, upsets are rare. If a model always predicts "Favorite Wins", it will have high accuracy but is useless for betting on upsets.
+If the ratio is 99:1, a model can achieve **99% Accuracy** by just saying "Not Fraud" every time. This is useless.
 """)
-st.markdown("---")
 
-# --- LAYER 5: Full Math ---
-st.header("5. The Math: Weighted Loss 🧮")
-st.markdown("How do we fix this? We punish the model more for missing the rare class.")
-
-st.latex(r"L = - [ w_1 y \log(p) + w_0 (1-y) \log(1-p) ]")
-
+# --- 2. Geometry / Structure ---
+st.header("2. Geometry: The Swamped Boundary")
 st.markdown("""
-*   Normally, $w_1 = w_0 = 1$.
-*   If Class 1 is rare (1%), we set $w_1 = 100$.
-*   Now, missing a Class 1 example costs **100x more** than missing a Class 0 example.
-*   The model is forced to pay attention.
+Standard algorithms minimize **Total Error**.
+Since the Majority Class contributes 99% of the error terms, the model focuses entirely on getting them right.
+The Decision Boundary is pushed deep into the Minority territory, ignoring the rare points.
 """)
-st.markdown("---")
 
-# --- Interactive Viz ---
-st.header("10. Interactive Playground")
+# --- 3. Constraints / Objective / Loss ---
+st.header("3. The Fix: Weighted Loss")
+st.markdown("""
+We can tell the model: "Pay more attention to the rare guys."
+We introduce **Class Weights** ($w_0, w_1$).
 
-imbalance = st.slider("Imbalance Ratio (Minority Class %)", 1, 50, 10)
-n_samples = 1000
-n_minority = int(n_samples * (imbalance / 100))
-n_majority = n_samples - n_minority
+**Weighted Log Loss:**
+""")
+st.latex(r"J(w) = - \frac{1}{N} \sum_{i=1}^N \left[ w_1 y_i \log(\hat{y}_i) + w_0 (1 - y_i) \log(1 - \hat{y}_i) \right]")
+st.markdown("""
+*   If Class 1 is 10x rarer, we set $w_1 = 10$ and $w_0 = 1$.
+*   Now, making a mistake on a Class 1 example costs 10x more penalty.
+*   The model is forced to respect the minority class.
+""")
 
-st.metric("Majority Class", n_majority)
-st.metric("Minority Class", n_minority)
-st.metric("Lazy Accuracy (Predict All Majority)", f"{n_majority/n_samples:.1%}")
+# --- 6. Visualization ---
+st.header("6. Visualization: The Shift")
 
-st.page_link("pages/02_model_playground.py", label="🎮 Go to Playground", icon="🎮")
+col_viz, col_controls = st.columns([3, 1])
+with col_controls:
+    weight = st.slider("Minority Weight", 1, 20, 1)
+
+with col_viz:
+    # Imbalanced Data
+    X, y = generate_moons(n_samples=300, noise=0.3)
+    # Kill 90% of class 1
+    mask = (y == 0) | (np.random.rand(len(y)) < 0.1)
+    X = X[mask]
+    y = y[mask]
+
+    clf = SVC(kernel='linear', class_weight={1: weight, 0: 1}, probability=True)
+    clf.fit(X, y)
+
+    # Grid
+    x_min, x_max = X[:, 0].min() - 0.5, X[:, 0].max() + 0.5
+    y_min, y_max = X[:, 1].min() - 0.5, X[:, 1].max() + 0.5
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.02), np.arange(y_min, y_max, 0.02))
+
+    Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
+    Z = Z.reshape(xx.shape)
+
+    fig = go.Figure()
+    fig.add_trace(go.Contour(x=np.arange(x_min, x_max, 0.02), y=np.arange(y_min, y_max, 0.02), z=Z,
+                             colorscale='RdBu', showscale=False, contours=dict(start=0, end=0, size=1, coloring='lines')))
+    fig.add_trace(go.Scatter(x=X[y==0, 0], y=X[y==0, 1], mode='markers', name='Majority (0)', marker=dict(color='red')))
+    fig.add_trace(go.Scatter(x=X[y==1, 0], y=X[y==1, 1], mode='markers', name='Minority (1)', marker=dict(color='blue', size=10)))
+
+    fig.update_layout(title=f"Decision Boundary (Weight 1:{weight})", height=500)
+    st.plotly_chart(fig, use_container_width=True)
+
+# --- 8. Super Summary ---
+st.header("8. Super Summary 🦸")
+st.info("""
+*   **Goal**: Prevent the majority class from dominating.
+*   **Math**: Weighted Loss Function ($w_1 > w_0$).
+*   **Key Insight**: Making mistakes on rare items must be expensive.
+*   **Knobs**: Class Weights or Resampling Ratios.
+""")

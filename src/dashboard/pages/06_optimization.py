@@ -8,97 +8,113 @@ sidebar_navigation()
 
 st.title("📉 Optimization: Gradient Descent")
 
-# --- LAYER 1: Intuition ---
-st.header("1. Intuition: The Blind Hiker 🏔️")
+# --- 1. Core Model Definition ---
+st.header("1. Core Model Definition")
 st.markdown("""
-Imagine you are on a mountain at night. It's pitch black. You want to get to the village at the bottom.
-You can't see the path. What do you do?
-1.  Feel the ground with your feet.
-2.  Find which way is **down**.
-3.  Take a small step.
-4.  Repeat.
+Machine Learning is just **Optimization**. We define a "Loss Function" $J(w)$ that measures how bad our model is, and we try to find the weights $w$ that minimize it.
 
-This is **Gradient Descent**.
-*   **Mountain**: The Loss Function (Error).
-*   **You**: The Model.
-*   **Village**: The Optimal Weights (Lowest Error).
+**The Update Rule (Gradient Descent):**
 """)
-st.markdown("---")
-
-# --- LAYER 3: Structure ---
-st.header("3. Structure: The Update Loop 🔄")
+st.latex(r"w_{new} = w_{old} - \eta \cdot \nabla J(w_{old})")
 st.markdown("""
-1.  **Calculate Gradient**: Find the slope ($\nabla J$).
-2.  **Update Weights**: Move opposite to the slope.
-    *   $w_{new} = w_{old} - \text{Step} \times \text{Slope}$
-3.  **Repeat**: Until slope is zero.
+*   $w$: The weights (parameters) we are tuning.
+*   $J(w)$: The Loss Function (Error).
+*   $\nabla J(w)$: The **Gradient**. The direction of steepest ascent (uphill).
+*   $\eta$ (Eta): The **Learning Rate**. The size of the step we take downhill.
 """)
-st.markdown("---")
 
-# --- LAYER 5: Full Math ---
-st.header("5. The Math: The Gradient Vector 🧮")
+# --- 2. Geometry / Structure ---
+st.header("2. Geometry: The Loss Landscape")
+st.markdown("""
+Imagine the Loss Function as a **Mountain Range**.
+*   **High Altitude**: High Error (Bad Model).
+*   **Sea Level**: Zero Error (Perfect Model).
+*   **Coordinates**: The weights $w_1, w_2$.
 
-st.subheader("A. The Gradient")
-st.markdown("The gradient $\nabla J(w)$ is a vector of partial derivatives. It always points **Uphill** (Steepest Ascent).")
-st.latex(r"\nabla J(w) = \left[ \frac{\partial J}{\partial w_1}, \frac{\partial J}{\partial w_2}, \dots \right]")
+We are a blind hiker dropped somewhere on the mountain. We feel the slope under our feet and take a step **down**.
+""")
 
-st.subheader("B. The Update Rule")
-st.markdown("Since we want to go **Downhill**, we subtract the gradient.")
-st.latex(r"w \leftarrow w - \eta \nabla J(w)")
-st.markdown("*   $\eta$ (Eta): Learning Rate. The size of the step.")
+# --- 3. Constraints / Objective / Loss ---
+st.header("3. The Gradient Vector")
+st.markdown("""
+The Gradient is a vector of partial derivatives. It points in the direction where the function increases the fastest.
+""")
+st.latex(r"\nabla J(w) = \begin{bmatrix} \frac{\partial J}{\partial w_1} \\ \frac{\partial J}{\partial w_2} \\ \vdots \end{bmatrix}")
+st.markdown("""
+*   If $\frac{\partial J}{\partial w_1} > 0$: Increasing $w_1$ increases Loss. So we should **decrease** $w_1$.
+*   If $\frac{\partial J}{\partial w_1} < 0$: Increasing $w_1$ decreases Loss. So we should **increase** $w_1$.
+*   The minus sign in the update rule ($- \eta \nabla J$) handles this logic automatically.
+""")
 
-st.subheader("C. Convexity")
-st.markdown("If the bowl is shaped like a perfect U (Convex), we are guaranteed to find the bottom. If it's wavy (Non-Convex), we might get stuck in a small valley (Local Minimum).")
-st.markdown("---")
+# --- 4. Deeper Components (Convexity) ---
+st.header("4. Convexity & Local Minima")
+st.markdown("""
+*   **Convex Function**: Shaped like a perfect bowl. Has only **one** minimum (Global Minimum). Gradient Descent is guaranteed to find it. (e.g., Linear Regression, Logistic Regression).
+*   **Non-Convex Function**: Wavy, with many valleys. Has many **Local Minima**. Gradient Descent might get stuck in a suboptimal valley. (e.g., Neural Networks).
+""")
 
-# --- LAYER 6: Diagrams (3D) ---
-st.header("6. Visualization: The 3D Loss Surface 🧊")
+# --- 6. Visualization ---
+st.header("6. Visualization: The 3D Surface")
 
-# 3D Surface Data
-x = np.linspace(-10, 10, 50)
-y = np.linspace(-10, 10, 50)
-X, Y = np.meshgrid(x, y)
-Z = X**2 + Y**2  # Simple Bowl
+col_viz, col_controls = st.columns([3, 1])
+with col_controls:
+    lr = st.slider("Learning Rate", 0.01, 1.2, 0.1)
+    steps = st.slider("Steps", 1, 50, 20)
+    start_x = st.slider("Start X", -9.0, 9.0, 8.0)
 
-fig_3d = go.Figure(data=[go.Surface(z=Z, x=X, y=Y, colorscale='Viridis', opacity=0.8)])
-fig_3d.update_layout(title="Loss Surface J(w1, w2)", scene=dict(xaxis_title='w1', yaxis_title='w2', zaxis_title='Loss'), height=500)
-st.plotly_chart(fig_3d, use_container_width=True)
+with col_viz:
+    # Surface Data
+    x = np.linspace(-10, 10, 50)
+    y = np.linspace(-10, 10, 50)
+    X, Y = np.meshgrid(x, y)
+    Z = X**2 + Y**2  # Simple Bowl
 
-st.markdown("---")
+    # Path Calculation
+    path_x = [start_x]
+    path_y = [0] # Keep y constant for simplicity in 2D path, or vary it
+    path_z = [start_x**2]
 
-# --- LAYER 7: Micro-Examples ---
-st.header("7. Micro-Examples 🧪")
-st.markdown("**Function**: $J(w) = w^2$. **Gradient**: $2w$.")
-st.markdown("**Start**: $w=3$. **Rate**: $\eta=0.1$.")
-st.markdown("1. Grad = $2(3) = 6$.")
-st.markdown("2. Step = $0.1 \times 6 = 0.6$.")
-st.markdown("3. New w = $3 - 0.6 = 2.4$.")
-st.markdown("4. Grad = $2(2.4) = 4.8$. (Slope got smaller!)")
-st.markdown("---")
+    curr_x = start_x
+    curr_y = 0
 
-# --- Interactive Viz ---
-st.header("10. Interactive Playground")
-col1, col2 = st.columns([1, 3])
-with col1:
-    lr = st.slider("Learning Rate", 0.01, 1.1, 0.1)
-    steps = st.slider("Steps", 1, 50, 10)
-
-with col2:
-    w_range = np.linspace(-10, 10, 100)
-    J_range = w_range**2
-
-    path_w = [8.0]
-    path_J = [64.0]
-    curr = 8.0
     for _ in range(steps):
-        grad = 2 * curr
-        curr = curr - lr * grad
-        path_w.append(curr)
-        path_J.append(curr**2)
+        grad_x = 2 * curr_x
+        grad_y = 2 * curr_y
+
+        curr_x = curr_x - lr * grad_x
+        curr_y = curr_y - lr * grad_y
+
+        path_x.append(curr_x)
+        path_y.append(curr_y)
+        path_z.append(curr_x**2 + curr_y**2)
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=w_range, y=J_range, name="Loss"))
-    fig.add_trace(go.Scatter(x=path_w, y=path_J, mode='markers+lines', name="Path", marker=dict(color='red')))
+
+    # Surface
+    fig.add_trace(go.Surface(z=Z, x=X, y=Y, colorscale='Viridis', opacity=0.8, showscale=False))
+
+    # Path
+    fig.add_trace(go.Scatter3d(x=path_x, y=path_y, z=path_z, mode='markers+lines',
+                               marker=dict(size=5, color='red'), line=dict(color='red', width=5), name='Path'))
+
+    fig.update_layout(title="Gradient Descent on J(w) = w1^2 + w2^2",
+                      scene=dict(xaxis_title='w1', yaxis_title='w2', zaxis_title='Loss'), height=600)
     st.plotly_chart(fig, use_container_width=True)
 
-st.page_link("pages/02_model_playground.py", label="🎮 Go to Playground", icon="🎮")
+# --- 7. Hyperparameters ---
+st.header("7. Hyperparameters & Behavior")
+st.markdown("""
+*   **Learning Rate ($\eta$)**:
+    *   **Too Small**: Tiny steps. Takes forever to reach the bottom.
+    *   **Too Large**: Huge steps. Might overshoot the bottom and diverge (explode).
+    *   **Just Right**: Converges quickly and stably.
+""")
+
+# --- 8. Super Summary ---
+st.header("8. Super Summary 🦸")
+st.info("""
+*   **Goal**: Find weights $w$ that minimize Loss $J(w)$.
+*   **Math**: $w \leftarrow w - \eta \nabla J$.
+*   **Key Insight**: Follow the slope downhill.
+*   **Knobs**: Learning Rate is the most critical parameter.
+""")
