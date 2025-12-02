@@ -58,8 +58,8 @@ The application is divided into interactive modules:
 You can run this project in three ways:
 
 ### Option 1: Streamlit Cloud (Easiest)
-[Click here to view the live app](https://tennis-ml-platform.streamlit.app)
-*(Note: Replace with your actual deployment URL)*
+[Click here to view the live app](https://learn-ai-software.streamlit.app/)
+
 
 ### Option 2: Docker (Recommended for Devs)
 If you have Docker installed, this is the cleanest way to run the app.

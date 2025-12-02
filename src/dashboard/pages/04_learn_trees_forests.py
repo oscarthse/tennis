@@ -1,11 +1,13 @@
 import streamlit as st
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from src.dashboard.components.navigation import sidebar_navigation
 from src.dashboard.components.model_cards import render_model_card
 from src.dashboard.components.toy_datasets import generate_moons, generate_circles
+from src.dashboard.components.mermaid import render_mermaid
 
 st.set_page_config(page_title="Trees & Forests", page_icon="🌳", layout="wide")
 sidebar_navigation()
@@ -36,98 +38,190 @@ Imagine you are a commentator trying to guess if a player will win. You can only
     *   **No**: (Probably wins).
 
 A **Decision Tree** automates this. It looks at all possible questions (features) and picks the one that **best separates** the Winners from the Losers.
-
-*   **Root Node**: The first question (e.g., Rank).
-*   **Leaf Node**: The final prediction (Win/Loss).
-*   **Depth**: How many questions we ask.
 """)
 
 st.markdown("---")
 
-# 3. The Math
-st.header("2. The Math: Measuring 'Purity'")
-st.markdown("How does the tree decide which question is 'best'? It tries to maximize **Information Gain**. It wants the groups after the split to be as **pure** as possible (all Wins or all Losses).")
+# 3. The Toy Dataset
+st.header("2. The Toy Dataset")
+st.markdown("To understand how the tree is built, let's look at a tiny dataset of **6 Matches**.")
 
-st.subheader("Entropy (The Measure of Chaos)")
-st.markdown("Entropy $H(S)$ measures the uncertainty in a dataset $S$.")
-st.latex(r"H(S) = - \sum_{i=1}^c p_i \log_2(p_i)")
+toy_data = pd.DataFrame({
+    'Match': [1, 2, 3, 4, 5, 6],
+    'RankDiff': [10, -5, 20, 50, -2, 5],
+    'Surface': ['Clay', 'Grass', 'Clay', 'Hard', 'Grass', 'Hard'],
+    'Winner': ['Win', 'Win', 'Lose', 'Lose', 'Win', 'Lose']
+})
+
+st.dataframe(toy_data, use_container_width=True)
 
 st.markdown("""
-*   $p_i$: The proportion of class $i$ in the node.
-*   **Max Entropy (1.0)**: 50% Wins, 50% Losses. (Total Chaos).
-*   **Min Entropy (0.0)**: 100% Wins. (Total Order).
+*   **RankDiff**: (Player Rank - Opponent Rank). Positive means Player is worse.
+*   **Goal**: Separate the **3 Wins** from the **3 Losses**.
 """)
-
-st.subheader("Gini Impurity (The Alternative)")
-st.markdown("Gini is faster to compute (no logs) and is the default in Scikit-Learn.")
-st.latex(r"G(S) = 1 - \sum_{i=1}^c p_i^2")
-st.markdown("Like Entropy, it is 0 for pure nodes and maximum (0.5) for 50/50 mixes.")
-
-st.subheader("Information Gain (The Decision Rule)")
-st.markdown("The tree picks the split that reduces Entropy the most.")
-st.latex(r"IG(S, A) = H(S) - \sum_{v \in \text{Children}} \frac{|S_v|}{|S|} H(S_v)")
-st.markdown("*   $H(S)$: Entropy before split.\n*   Weighted Sum: Average entropy after split.")
 
 st.markdown("---")
 
-# 4. Worked Example
-st.header("3. Step-by-Step Worked Example")
-st.markdown("Let's calculate the Entropy of a node manually.")
+# 4. Building the Tree (Step-by-Step)
+st.header("3. Building the Tree: Step-by-Step")
+st.markdown("The tree wants to find the question that makes the resulting groups as **pure** as possible.")
 
-st.markdown("### The Node")
-st.markdown("Suppose we have a group of **10 matches**:")
-st.markdown("*   **6 Wins (+)**")
-st.markdown("*   **4 Losses (-)**")
+st.subheader("Step 1: Calculate Impurity (Gini) of the Root")
+st.markdown("At the start (Root Node), we have all 6 matches: **3 Wins, 3 Losses**.")
+st.markdown("The **Gini Impurity** formula is:")
+st.latex(r"G = 1 - \sum p_i^2")
+
+st.markdown("""
+*   $p_{win} = 3/6 = 0.5$
+*   $p_{loss} = 3/6 = 0.5$
+""")
+st.latex(r"G_{root} = 1 - (0.5^2 + 0.5^2) = 1 - (0.25 + 0.25) = 0.5")
+st.markdown("**Gini = 0.5** means maximum impurity (total chaos). We want to get this to 0.0.")
+
+st.subheader("Step 2: Try a Split on 'RankDiff < 8'")
+st.markdown("Let's ask: *Is RankDiff less than 8?*")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("#### Step 1: Calculate Proportions")
-    st.latex(r"p_+ = \frac{6}{10} = 0.6")
-    st.latex(r"p_- = \frac{4}{10} = 0.4")
+    st.markdown("**Yes (Left Node)**")
+    st.markdown("Matches: 2, 5, 6")
+    st.markdown("*   RankDiffs: -5, -2, 5")
+    st.markdown("*   Results: **Win, Win, Lose**")
+    st.markdown("*   **2 Wins, 1 Loss**")
+    st.latex(r"G_{left} = 1 - ((\frac{2}{3})^2 + (\frac{1}{3})^2) \approx 0.44")
 
 with col2:
-    st.markdown("#### Step 2: Calculate Entropy")
-    st.latex(r"H(S) = - [0.6 \log_2(0.6) + 0.4 \log_2(0.4)]")
-    st.markdown("Using $\log_2(0.6) \approx -0.737$ and $\log_2(0.4) \approx -1.322$:")
-    st.latex(r"H(S) = - [0.6(-0.737) + 0.4(-1.322)]")
-    st.latex(r"H(S) = - [-0.442 - 0.529] = 0.971")
+    st.markdown("**No (Right Node)**")
+    st.markdown("Matches: 1, 3, 4")
+    st.markdown("*   RankDiffs: 10, 20, 50")
+    st.markdown("*   Results: **Win, Lose, Lose**")
+    st.markdown("*   **1 Win, 2 Losses**")
+    st.latex(r"G_{right} = 1 - ((\frac{1}{3})^2 + (\frac{2}{3})^2) \approx 0.44")
 
-st.success("Result: Entropy is **0.971**. This is very high (close to 1), meaning the group is very mixed/impure.")
+st.markdown("**Weighted Gini for this Split:**")
+st.latex(r"G_{split} = \frac{3}{6}(0.44) + \frac{3}{6}(0.44) = 0.44")
+st.markdown("Improvement: $0.5 - 0.44 = 0.06$. (A small gain).")
 
-st.markdown("#### Step 3: Evaluate a Split")
-st.markdown("Now imagine we split this group by **Surface=Clay**.")
-st.markdown("*   **Left Child (Clay)**: 5 Wins, 0 Losses. (Pure!)")
-st.markdown("*   **Right Child (Hard)**: 1 Win, 4 Losses.")
+st.subheader("Step 3: Try a Split on 'Surface == Clay'")
+st.markdown("Let's ask: *Is the Surface Clay?*")
 
-st.markdown("**Entropy(Left)** = 0.0 (Pure).")
-st.markdown("**Entropy(Right)** = Calculate for (1/5, 4/5)... it will be lower than 0.971.")
-st.markdown("The weighted average will be much lower than 0.971, so **Information Gain is High**. This is a good split!")
+col3, col4 = st.columns(2)
+
+with col3:
+    st.markdown("**Yes (Left Node)**")
+    st.markdown("Matches: 1, 3")
+    st.markdown("*   Results: **Win, Lose**")
+    st.markdown("*   **1 Win, 1 Loss**")
+    st.latex(r"G_{left} = 0.5 \text{ (Still impure)}")
+
+with col4:
+    st.markdown("**No (Right Node)**")
+    st.markdown("Matches: 2, 4, 5, 6")
+    st.markdown("*   Results: **Win, Lose, Win, Lose**")
+    st.markdown("*   **2 Wins, 2 Losses**")
+    st.latex(r"G_{right} = 0.5 \text{ (Still impure)}")
+
+st.markdown("**Weighted Gini:** 0.5. **Improvement: 0.0**. This split is useless!")
+
+st.subheader("Step 4: The Best Split")
+st.markdown("The computer tries *every possible number*. It finds that **RankDiff < 0** is the best split.")
+st.markdown("*   **Yes**: Matches 2, 5 (-5, -2). **2 Wins, 0 Losses**. (Pure!)")
+st.markdown("*   **No**: Matches 1, 3, 4, 6. **1 Win, 3 Losses**.")
+
+st.markdown("This reduces impurity the most. So the tree picks this as the Root Question.")
+
+st.subheader("The Final Tree")
+render_mermaid("""
+graph TD
+    Root["RankDiff < 0? <br> (3 Win, 3 Loss)"] -->|Yes| Left["Leaf: WIN <br> (2 Win, 0 Loss) <br> Gini=0.0"]
+    Root -->|No| Right["RankDiff < 30? <br> (1 Win, 3 Loss)"]
+    Right -->|Yes| R_Left["Leaf: LOSE <br> (0 Win, 3 Loss)"]
+    Right -->|No| R_Right["Leaf: WIN <br> (1 Win, 0 Loss)"]
+
+    style Left fill:#c8e6c9
+    style R_Left fill:#ffcdd2
+    style R_Right fill:#c8e6c9
+""", height=400)
 
 st.markdown("---")
 
-# 5. Code
-st.header("4. The Code")
-st.code("""
-from sklearn.tree import DecisionTreeClassifier
+# 5. Random Forests
+st.header("4. Random Forests: The Wisdom of Crowds")
+st.markdown("""
+Decision Trees have a fatal flaw: **They memorize data.**
+If we changed one match in our dataset, the whole tree might change. This is called **High Variance**.
 
-# 1. Initialize
-# max_depth=3: Only ask 3 questions (prevents overfitting)
-model = DecisionTreeClassifier(criterion='entropy', max_depth=3)
+To fix this, we don't just build one tree. We build **100 trees** and let them vote.
+This is a **Random Forest**.
 
-# 2. Train
-model.fit(X_train, y_train)
+### The Math: Why Averaging Works
+Why does averaging 100 bad trees make one good forest?
+The variance of the average of $n$ trees is:
 
-# 3. Visualize
-from sklearn.tree import plot_tree
-plot_tree(model, feature_names=['RankDiff', 'PointsDiff'])
-""", language="python")
+$$
+Var(\text{Forest}) = \rho \sigma^2 + \frac{1-\rho}{n} \sigma^2
+$$
+
+*   $\sigma^2$: Variance of a single tree (High).
+*   $n$: Number of trees (e.g., 100).
+*   $\rho$ (rho): **Correlation** between trees.
+
+**The Goal**:
+1.  Increase $n$ (More trees) $\to$ Second term vanishes.
+2.  **Decrease $\rho$** (Make trees different) $\to$ First term shrinks.
+
+**How do we decrease correlation ($\rho$)?**
+We force the trees to be different using **Bootstrapping** and **Feature Randomness**.
+""")
+
+st.subheader("Secret Sauce 1: Bootstrapping (Bagging)")
+st.markdown("If we gave the same dataset to 100 trees, they would all look identical. We need them to be different.")
+st.markdown("We create **Bootstrap Samples** (Random sampling *with replacement*).")
+
+col_b1, col_b2, col_b3 = st.columns(3)
+with col_b1:
+    st.markdown("**Tree 1's Data**")
+    st.markdown("Match 1, 1, 2, 5, 6, 6")
+    st.caption("Notice duplicates and missing Match 3 & 4.")
+with col_b2:
+    st.markdown("**Tree 2's Data**")
+    st.markdown("Match 2, 3, 3, 4, 5, 6")
+with col_b3:
+    st.markdown("**Tree 3's Data**")
+    st.markdown("Match 1, 2, 3, 4, 4, 5")
+
+st.subheader("Secret Sauce 2: Feature Randomness")
+st.markdown("""
+At every split, the tree is **NOT allowed to look at all features**.
+It is forced to pick from a random subset (e.g., only 'Surface' and 'Odds').
+*   This forces trees to learn different patterns.
+*   It prevents one strong feature (like RankDiff) from dominating every tree.
+""")
+
+st.subheader("The Forest Vote")
+render_mermaid("""
+graph LR
+    Input["New Match: <br> RankDiff=5, Surface=Clay"] --> T1
+    Input --> T2
+    Input --> T3
+
+    subgraph Forest
+        T1["Tree 1"] -->|Vote| V1["Win"]
+        T2["Tree 2"] -->|Vote| V2["Lose"]
+        T3["Tree 3"] -->|Vote| V3["Win"]
+    end
+
+    V1 --> Final["Majority Vote: <br> WIN"]
+    V2 --> Final
+    V3 --> Final
+""", height=300)
 
 st.markdown("---")
 
 # 6. Interactive Viz
 st.header("5. Interactive Visualization")
-st.markdown("Compare a single Decision Tree vs. a Random Forest (Bagging).")
+st.markdown("Compare a single Decision Tree vs. a Random Forest.")
 
 col1, col2 = st.columns([1, 3])
 
@@ -192,10 +286,10 @@ with col2:
     fig.update_layout(title=f"{model_type} Boundary (Acc: {clf.score(X, y):.2f})", height=500)
     st.plotly_chart(fig, use_container_width=True)
 
-    if max_depth > 10:
-        st.warning("⚠️ High depth! Notice how the boundary becomes jagged and captures noise? This is **Overfitting**.")
+    if max_depth > 10 and model_type == "Decision Tree":
+        st.warning("⚠️ **Overfitting Alert**: Notice how the Decision Tree creates tiny, jagged islands to capture every single noise point? This is bad for future data.")
     if model_type == "Random Forest":
-        st.success("✅ Random Forest averages many trees to create a smoother, more robust boundary.")
+        st.success("✅ **Smoother Boundary**: The Random Forest averages out the jagged edges, creating a more robust model.")
 
 st.markdown("---")
 st.page_link("pages/02_model_playground.py", label="🎮 Try Random Forest in the Playground", icon="🎮")

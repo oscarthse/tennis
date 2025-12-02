@@ -146,6 +146,14 @@ with tab2:
 
     st.latex(r"J(w) = \frac{1}{2} ||w||^2 + C \sum_{i=1}^N \max(0, 1 - y_i(w^\top x_i + b))")
 
+    st.markdown("### Why minimize $||w||^2$?")
+    st.markdown("This is not arbitrary. It is a **Geometric Proof**.")
+    st.markdown("1. The distance from a point $x$ to the hyperplane $w^Tx + b = 0$ is $\\frac{|w^Tx + b|}{||w||}$.")
+    st.markdown("2. For Support Vectors, $|w^Tx + b| = 1$.")
+    st.markdown("3. So the distance (Margin) is $\\frac{1}{||w||}$.")
+    st.markdown("4. To **Maximize** the Margin $\\frac{1}{||w||}$, we must **Minimize** $||w||$.")
+    st.markdown("5. For mathematical convenience (derivatives), we minimize $\\frac{1}{2}||w||^2$.")
+
     st.markdown("""
     *   **Term 1**: $\frac{1}{2} ||w||^2$. Minimizing $w$ maximizes the Margin. (Geometric property).
     *   **Term 2**: The Error.

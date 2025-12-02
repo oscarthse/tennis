@@ -74,13 +74,39 @@ st.markdown("""
 """)
 
 st.subheader("Step 4: Gradient Descent")
-st.markdown("To minimize the loss, we take the derivative with respect to the weights $w$. Remarkably, the derivative simplifies to a beautiful expression:")
-st.latex(r"\frac{\partial L}{\partial w} = \frac{1}{N} \sum_{i=1}^N (\hat{y}_i - y_i) x_i")
+st.markdown("To minimize the loss, we need the gradient $\\nabla L$. Many courses just give you the formula. **We will derive it.**")
+
+st.markdown("We use the **Chain Rule** from Calculus:")
+st.latex(r"\frac{\partial L}{\partial w} = \frac{\partial L}{\partial p} \cdot \frac{\partial p}{\partial z} \cdot \frac{\partial z}{\partial w}")
+
+col_d1, col_d2, col_d3 = st.columns(3)
+
+with col_d1:
+    st.markdown("**1. Loss w.r.t Probability**")
+    st.latex(r"\frac{\partial L}{\partial p} = \frac{p - y}{p(1-p)}")
+    st.caption("(Derived from Log Loss)")
+
+with col_d2:
+    st.markdown("**2. Probability w.r.t Score**")
+    st.latex(r"\frac{\partial p}{\partial z} = p(1-p)")
+    st.caption("(Derivative of Sigmoid)")
+
+with col_d3:
+    st.markdown("**3. Score w.r.t Weights**")
+    st.latex(r"\frac{\partial z}{\partial w} = x")
+    st.caption("(Derivative of $wx+b$)")
+
+st.markdown("Now, multiply them all together. The magic happens in the middle:")
+st.latex(r"\frac{\partial L}{\partial w} = \left( \frac{p - y}{p(1-p)} \right) \cdot (p(1-p)) \cdot x")
+st.markdown("The $p(1-p)$ terms **cancel out** perfectly!")
+
+st.success("Final Gradient Formula:")
+st.latex(r"\frac{\partial L}{\partial w} = (p - y) \cdot x")
 
 st.markdown("""
 **Interpretation:**
-*   $(\hat{y}_i - y_i)$: The **Error**. (Prediction - Actual).
-*   $x_i$: The **Input**.
+*   $(p - y)$: The **Error**. (Prediction - Actual).
+*   $x$: The **Input**.
 *   The gradient tells us: "If the error is positive, decrease the weight for this input."
 """)
 
