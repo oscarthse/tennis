@@ -31,7 +31,7 @@ with tab1:
     **The Prediction Function:**
     """)
     st.latex(r"\hat{y}(x) = \sum_{m=1}^M c_m I(x \in R_m)")
-    st.markdown("""
+    st.markdown(r"""
     *   $M$: Number of leaf nodes (regions).
     *   $R_m$: The $m$-th region (box) in the feature space.
     *   $c_m$: The constant prediction for region $R_m$ (e.g., majority class).
@@ -40,7 +40,7 @@ with tab1:
 
     # --- 2. Geometry / Structure ---
     st.subheader("2. Geometry: Orthogonal Boundaries")
-    st.markdown("""
+    st.markdown(r"""
     Trees cut the space using **Axis-Aligned Splits** ($x_j \le t$).
     *   This creates "Boxy" decision boundaries.
     *   Unlike SVM or Logistic Regression, Trees cannot draw diagonal lines easily (they need a "staircase" to approximate a diagonal).
@@ -153,7 +153,7 @@ with tab2:
     **Variance of the Average:**
     """)
     st.latex(r"Var(\bar{X}) = \rho \sigma^2 + \frac{1-\rho}{B} \sigma^2")
-    st.markdown("""
+    st.markdown(r"""
     *   $\sigma^2$: Variance of a single tree.
     *   $B$: Number of trees.
     *   $\rho$: Correlation between trees.
@@ -162,7 +162,7 @@ with tab2:
 
     # --- 4. Deeper Components (Randomness) ---
     st.subheader("4. Injecting Randomness")
-    st.markdown("""
+    st.markdown(r"""
     To make trees diverse (low $\rho$), we inject randomness in two places:
     1.  **Bootstrapping**: Each tree sees a random subset of the data (with replacement).
     2.  **Feature Randomness**: At each split, the tree can only choose from a random subset of features (e.g., $\sqrt{p}$ features).

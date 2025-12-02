@@ -1,97 +1,140 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
-from sklearn.metrics import roc_curve, precision_recall_curve, confusion_matrix
+from sklearn.metrics import roc_curve, precision_recall_curve, confusion_matrix, roc_auc_score
 from src.dashboard.components.navigation import sidebar_navigation
-from src.dashboard.components.toy_datasets import generate_moons
 
 st.set_page_config(page_title="Validation & Metrics", page_icon="✅", layout="wide")
 sidebar_navigation()
 
-st.title("✅ Validation & Metrics")
+st.title("✅ Validation & Metrics: Beyond Accuracy")
 
 # --- 1. Core Model Definition ---
 st.header("1. Core Model Definition")
-st.markdown("""
-Accuracy is not enough. We need to understand **how** the model is wrong.
-The foundation of all metrics is the **Confusion Matrix**.
+st.markdown(r"""
+**Accuracy is a Lie.**
+If 99% of transactions are legit, a model that says "Legit" 100% of the time has 99% Accuracy but **Zero Intelligence**.
 
-**The Four Outcomes:**
-*   **True Positive (TP)**: Predicted Win, Actually Win. (Correct)
-*   **False Positive (FP)**: Predicted Win, Actually Lose. (Type I Error / False Alarm).
-*   **False Negative (FN)**: Predicted Lose, Actually Win. (Type II Error / Miss).
-*   **True Negative (TN)**: Predicted Lose, Actually Lose. (Correct).
+We need granular metrics derived from the **Confusion Matrix**:
 """)
-
-# --- 2. Geometry / Structure ---
-st.header("2. Geometry: The Threshold Slider")
-st.markdown("""
-Most models output a probability (e.g., 0.7). We need a **Threshold** (usually 0.5) to make a decision.
-*   If $p > T$: Predict Positive.
-*   If $p < T$: Predict Negative.
-
-Moving this threshold $T$ trades off FPs and FNs.
-*   **Low Threshold (0.1)**: Predict "Win" aggressively. High Recall, Low Precision. (Catch all wins, but many false alarms).
-*   **High Threshold (0.9)**: Predict "Win" conservatively. High Precision, Low Recall. (Only bet on sure things).
-""")
-
-# --- 3. Constraints / Objective / Loss ---
-st.header("3. The Metrics")
-st.markdown("We define derived metrics to capture specific behaviors.")
 
 col1, col2 = st.columns(2)
 with col1:
-    st.subheader("Precision")
-    st.latex(r"\text{Precision} = \frac{TP}{TP + FP}")
-    st.markdown("**Interpretation**: When the model says 'Win', how often is it right? (Trustworthiness).")
-
+    st.markdown("**The Truth**")
+    st.markdown("*   **Positive (1)**: Win / Fraud / Sick")
+    st.markdown("*   **Negative (0)**: Lose / Legit / Healthy")
 with col2:
-    st.subheader("Recall (Sensitivity)")
-    st.latex(r"\text{Recall} = \frac{TP}{TP + FN}")
-    st.markdown("**Interpretation**: Out of all actual Wins, how many did we find? (Coverage).")
+    st.markdown("**The Prediction**")
+    st.markdown("*   **TP**: Hit (Correct)")
+    st.markdown("*   **FP**: False Alarm (Type I)")
+    st.markdown("*   **FN**: Miss (Type II)")
+    st.markdown("*   **TN**: Correct Rejection")
 
-st.subheader("F1 Score")
-st.latex(r"F1 = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}")
-st.markdown("The Harmonic Mean. It punishes extreme values (e.g., if Precision is 0, F1 is 0).")
+# --- 2. The Tradeoff (Platinum Depth) ---
+st.header("2. The Precision-Recall Tradeoff")
+st.markdown(r"""
+You cannot have it all. You must choose what you care about.
+
+*   **Precision**: $\frac{TP}{TP + FP}$. "When I say it's a Win, am I lying?"
+    *   **High Precision Needed**: Spam Filter (Don't delete important emails), Stock Picking (Don't lose money).
+*   **Recall**: $\frac{TP}{TP + FN}$. "Did I find all the Wins?"
+    *   **High Recall Needed**: Cancer Detection (Don't miss a sick patient), Fraud Detection (Catch all thieves).
+
+**The Threshold ($T$):**
+*   $P(\text{Win}) > T \implies \text{Predict Win}$.
+*   **Raise $T$** (e.g., 0.9): Fewer predictions, but higher confidence. **Precision $\uparrow$, Recall $\downarrow$**.
+*   **Lower $T$** (e.g., 0.1): More predictions, catch everything. **Recall $\uparrow$, Precision $\downarrow$**.
+""")
+
+# --- 3. Advanced Metrics (Platinum Depth) ---
+st.header("3. Advanced Metrics")
+
+tab_auc, tab_f1, tab_mcc = st.tabs(["AUC-ROC", "F1 Score", "Kappa & MCC"])
+
+with tab_auc:
+    st.subheader("AUC-ROC: The Probabilistic View")
+    st.markdown(r"""
+    **ROC Curve**: Plot of TPR (Recall) vs FPR (False Alarm Rate) at *all possible thresholds*.
+    **AUC (Area Under Curve)**: A single number summary (0.5 = Random, 1.0 = Perfect).
+
+    **Deep Intuition**:
+    AUC is the probability that the model ranks a random **Positive** example higher than a random **Negative** example.
+    """)
+    st.latex(r"AUC = P(\text{Score}(x_{pos}) > \text{Score}(x_{neg}))")
+
+with tab_f1:
+    st.subheader("F1 Score: The Harmonic Mean")
+    st.markdown(r"""
+    If Precision=0.01 and Recall=1.0 (The "Predict All" strategy), the Arithmetic Mean is 0.5 (Misleading).
+    The **Harmonic Mean** punishes extreme values.
+    """)
+    st.latex(r"F1 = 2 \cdot \frac{P \cdot R}{P + R}")
+    st.markdown("If either P or R is near 0, F1 crashes to 0.")
+
+with tab_mcc:
+    st.subheader("Matthews Correlation Coefficient (MCC)")
+    st.markdown(r"""
+    The **Gold Standard** for binary classification, especially with imbalance.
+    It treats all 4 quadrants of the confusion matrix equally.
+    Range: [-1, +1].
+    *   +1: Perfect.
+    *   0: Random guessing.
+    *   -1: Perfectly wrong (Inverse prediction).
+    """)
 
 # --- 6. Visualization ---
-st.header("6. Visualization: ROC & PR Curves")
+st.header("6. Visualization: The Threshold Slider")
 
 col_viz, col_controls = st.columns([3, 1])
 with col_controls:
-    noise = st.slider("Noise", 0.1, 1.0, 0.5)
-    imbalance = st.slider("Imbalance (Ratio 0:1)", 0.1, 0.9, 0.5)
+    threshold = st.slider("Decision Threshold", 0.0, 1.0, 0.5)
+    noise = st.slider("Noise", 0.1, 2.0, 1.0)
+    separation = st.slider("Separation", 0.0, 5.0, 2.0)
 
 with col_viz:
     # Generate Data
-    n_samples = 500
-    n_class1 = int(n_samples * imbalance)
-    n_class0 = n_samples - n_class1
+    n = 1000
+    # Class 0: N(0, 1)
+    # Class 1: N(separation, 1)
+    neg = np.random.normal(0, 1, n)
+    pos = np.random.normal(separation, 1, n)
 
-    # Simple synthetic scores
-    # Class 0: N(0, 1), Class 1: N(1 + noise, 1)
-    scores_0 = np.random.normal(0, 1, n_class0)
-    scores_1 = np.random.normal(2 - noise, 1, n_class1)
+    y_true = np.concatenate([np.zeros(n), np.ones(n)])
+    y_scores = np.concatenate([neg, pos])
 
-    y_true = np.concatenate([np.zeros(n_class0), np.ones(n_class1)])
-    y_scores = np.concatenate([scores_0, scores_1])
+    # Metrics at current threshold
+    y_pred = (y_scores > threshold).astype(int)
+    tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
 
-    # ROC
-    fpr, tpr, thresholds = roc_curve(y_true, y_scores)
+    prec = tp / (tp + fp) if (tp + fp) > 0 else 0
+    rec = tp / (tp + fn) if (tp + fn) > 0 else 0
+    f1 = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0
 
+    # Plots
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=fpr, y=tpr, mode='lines', name='ROC Curve', line=dict(color='blue', width=3)))
-    fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Random', line=dict(dash='dash', color='gray')))
-    fig.update_layout(title="ROC Curve", xaxis_title="False Positive Rate (1-Specificity)", yaxis_title="True Positive Rate (Recall)", height=500)
+
+    # Distributions
+    fig.add_trace(go.Histogram(x=neg, name='Class 0 (Neg)', opacity=0.5, marker_color='red', nbinsx=50))
+    fig.add_trace(go.Histogram(x=pos, name='Class 1 (Pos)', opacity=0.5, marker_color='blue', nbinsx=50))
+
+    # Threshold Line
+    fig.add_vline(x=threshold, line_width=3, line_dash="dash", line_color="black", annotation_text="Threshold")
+
+    fig.update_layout(barmode='overlay', title="Score Distributions", height=400)
     st.plotly_chart(fig, use_container_width=True)
 
-    st.caption("Top-Left is best (High TPR, Low FPR).")
+    # Metrics Display
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Precision", f"{prec:.2f}")
+    c2.metric("Recall", f"{rec:.2f}")
+    c3.metric("F1 Score", f"{f1:.2f}")
+    c4.metric("Accuracy", f"{(tp+tn)/(2*n):.2f}")
 
 # --- 8. Super Summary ---
 st.header("8. Super Summary 🦸")
-st.info("""
-*   **Goal**: Evaluate model performance beyond simple accuracy.
-*   **Math**: Precision ($TP/PredP$), Recall ($TP/TrueP$).
-*   **Key Insight**: There is always a trade-off between Precision and Recall. You choose it by setting the Threshold.
-*   **Knobs**: The Decision Threshold.
+st.info(r"""
+*   **Precision**: Quality of positive predictions.
+*   **Recall**: Quantity of positive predictions found.
+*   **Threshold**: The knob that trades P for R.
+*   **AUC**: How well separated the distributions are (independent of threshold).
 """)

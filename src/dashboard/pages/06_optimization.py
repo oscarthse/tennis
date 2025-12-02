@@ -6,52 +6,89 @@ from src.dashboard.components.navigation import sidebar_navigation
 st.set_page_config(page_title="Gradient Descent", page_icon="📉", layout="wide")
 sidebar_navigation()
 
-st.title("📉 Optimization: Gradient Descent")
+st.title("📉 Optimization: The Engine of Learning")
 
 # --- 1. Core Model Definition ---
 st.header("1. Core Model Definition")
-st.markdown("""
-Machine Learning is just **Optimization**. We define a "Loss Function" $J(w)$ that measures how bad our model is, and we try to find the weights $w$ that minimize it.
+st.markdown(r"""
+Machine Learning is fundamentally an **Optimization Problem**.
+We define a **Loss Function** $J(w)$ that measures "Badness".
+Our goal is to find the weights $w^*$ that minimize this badness.
 
-**The Update Rule (Gradient Descent):**
+**The Algorithm: Gradient Descent**
+Imagine you are a blind hiker on a mountain. You want to reach the bottom (Minimum Loss).
+1.  Feel the slope under your feet ($\nabla J$).
+2.  Take a step downhill.
+3.  Repeat.
+
+**The Update Rule:**
 """)
-st.latex(r"w_{new} = w_{old} - \eta \cdot \nabla J(w_{old})")
-st.markdown("""
-*   $w$: The weights (parameters) we are tuning.
-*   $J(w)$: The Loss Function (Error).
-*   $\nabla J(w)$: The **Gradient**. The direction of steepest ascent (uphill).
-*   $\eta$ (Eta): The **Learning Rate**. The size of the step we take downhill.
+st.latex(r"w_{t+1} = w_t - \eta \cdot \nabla J(w_t)")
+st.markdown(r"""
+*   $w$: The weights (parameters).
+*   $\nabla J$: The **Gradient** (Steepest Ascent).
+*   $\eta$ (Eta): The **Learning Rate** (Step Size).
 """)
 
 # --- 2. Geometry / Structure ---
 st.header("2. Geometry: The Loss Landscape")
-st.markdown("""
-Imagine the Loss Function as a **Mountain Range**.
-*   **High Altitude**: High Error (Bad Model).
-*   **Sea Level**: Zero Error (Perfect Model).
-*   **Coordinates**: The weights $w_1, w_2$.
+st.markdown(r"""
+*   **Convex**: A perfect bowl. Has one global minimum. (e.g., Linear/Logistic Regression). Easy to solve.
+*   **Non-Convex**: A rugged landscape with many peaks and valleys. Has many **Local Minima**. (e.g., Neural Networks). Hard to solve.
 
-We are a blind hiker dropped somewhere on the mountain. We feel the slope under our feet and take a step **down**.
+**The Gradient Vector**:
+The gradient is a vector of partial derivatives. It points **Uphill**.
 """)
+st.latex(r"\nabla J(w) = \left[ \frac{\partial J}{\partial w_1}, \frac{\partial J}{\partial w_2}, \dots \right]^T")
 
-# --- 3. Constraints / Objective / Loss ---
-st.header("3. The Gradient Vector")
-st.markdown("""
-The Gradient is a vector of partial derivatives. It points in the direction where the function increases the fastest.
-""")
-st.latex(r"\nabla J(w) = \begin{bmatrix} \frac{\partial J}{\partial w_1} \\ \frac{\partial J}{\partial w_2} \\ \vdots \end{bmatrix}")
-st.markdown("""
-*   If $\frac{\partial J}{\partial w_1} > 0$: Increasing $w_1$ increases Loss. So we should **decrease** $w_1$.
-*   If $\frac{\partial J}{\partial w_1} < 0$: Increasing $w_1$ decreases Loss. So we should **increase** $w_1$.
-*   The minus sign in the update rule ($- \eta \nabla J$) handles this logic automatically.
-""")
+st.markdown("**Why the Minus Sign?**")
+st.latex(r"\text{If } \frac{\partial J}{\partial w} > 0 \implies \text{Slope is Positive (Uphill)} \implies \text{We must go Left (Decrease } w\text{)}")
+st.latex(r"\text{If } \frac{\partial J}{\partial w} < 0 \implies \text{Slope is Negative (Downhill)} \implies \text{We must go Right (Increase } w\text{)}")
 
-# --- 4. Deeper Components (Convexity) ---
-st.header("4. Convexity & Local Minima")
-st.markdown("""
-*   **Convex Function**: Shaped like a perfect bowl. Has only **one** minimum (Global Minimum). Gradient Descent is guaranteed to find it. (e.g., Linear Regression, Logistic Regression).
-*   **Non-Convex Function**: Wavy, with many valleys. Has many **Local Minima**. Gradient Descent might get stuck in a suboptimal valley. (e.g., Neural Networks).
-""")
+# --- 3. Advanced Optimizers (Platinum Depth) ---
+st.header("3. Advanced Optimizers: Beyond Vanilla GD")
+st.markdown("Vanilla Gradient Descent has problems. It gets stuck in flat areas (plateaus) and oscillates in ravines.")
+
+tab_mom, tab_adam, tab_sgd = st.tabs(["Momentum", "Adam", "Batch vs SGD"])
+
+with tab_mom:
+    st.subheader("Momentum: The Heavy Ball 🎳")
+    st.markdown(r"""
+    Imagine a heavy ball rolling down the hill. It gains **Momentum**.
+    *   If the gradient is small (flat), the ball keeps rolling because of its speed.
+    *   This helps it power through small bumps and plateaus.
+
+    **The Math:**
+    We keep a "Velocity" vector $v$.
+    """)
+    st.latex(r"v_{t+1} = \gamma v_t + \eta \nabla J(w_t)")
+    st.latex(r"w_{t+1} = w_t - v_{t+1}")
+    st.markdown(r"*   $\gamma$ (Gamma): Friction (usually 0.9). Retains 90% of previous speed.")
+
+with tab_adam:
+    st.subheader("Adam: The Smart Hiker 🧠")
+    st.markdown(r"""
+    **Ada**ptive **M**oment Estimation.
+    *   It adapts the learning rate for *each parameter* individually.
+    *   **Sparse Features**: Rarely updated parameters get huge steps.
+    *   **Frequent Features**: Frequently updated parameters get small steps.
+
+    It combines Momentum (First Moment) and RMSProp (Second Moment).
+    It is the **Default** optimizer for Deep Learning today.
+    """)
+
+with tab_sgd:
+    st.subheader("Batch vs. Stochastic vs. Mini-Batch")
+    st.markdown(r"""
+    How much data do we look at before taking a step?
+
+    1.  **Batch GD**: Look at **ALL** data. (Precise, but Slow).
+        *   "I read the entire map before taking one step."
+    2.  **Stochastic GD (SGD)**: Look at **ONE** sample. (Fast, but Noisy/Drunk).
+        *   "I look at one tree, take a step. Look at another tree, take a step."
+    3.  **Mini-Batch GD**: Look at **32 or 64** samples. (Best of both worlds).
+        *   "I look at a small patch of terrain, then move."
+    """)
 
 # --- 6. Visualization ---
 st.header("6. Visualization: The 3D Surface")
@@ -59,8 +96,9 @@ st.header("6. Visualization: The 3D Surface")
 col_viz, col_controls = st.columns([3, 1])
 with col_controls:
     lr = st.slider("Learning Rate", 0.01, 1.2, 0.1)
-    steps = st.slider("Steps", 1, 50, 20)
-    start_x = st.slider("Start X", -9.0, 9.0, 8.0)
+    steps = st.slider("Steps", 1, 100, 50)
+    optimizer = st.selectbox("Optimizer", ["GD", "Momentum"])
+    momentum = st.slider("Momentum (Gamma)", 0.0, 0.99, 0.9) if optimizer == "Momentum" else 0.0
 
 with col_viz:
     # Surface Data
@@ -70,19 +108,27 @@ with col_viz:
     Z = X**2 + Y**2  # Simple Bowl
 
     # Path Calculation
-    path_x = [start_x]
-    path_y = [0] # Keep y constant for simplicity in 2D path, or vary it
-    path_z = [start_x**2]
+    path_x = [8.0]
+    path_y = [0.0]
+    path_z = [64.0]
 
-    curr_x = start_x
-    curr_y = 0
+    curr_x = 8.0
+    curr_y = 0.0
+    vel_x = 0.0
+    vel_y = 0.0
 
     for _ in range(steps):
         grad_x = 2 * curr_x
-        grad_y = 2 * curr_y
+        grad_y = 2 * curr_y # + 5 * np.sin(curr_y) # Add some ruggedness? No, keep simple for demo
 
-        curr_x = curr_x - lr * grad_x
-        curr_y = curr_y - lr * grad_y
+        if optimizer == "Momentum":
+            vel_x = momentum * vel_x + lr * grad_x
+            vel_y = momentum * vel_y + lr * grad_y
+            curr_x = curr_x - vel_x
+            curr_y = curr_y - vel_y
+        else:
+            curr_x = curr_x - lr * grad_x
+            curr_y = curr_y - lr * grad_y
 
         path_x.append(curr_x)
         path_y.append(curr_y)
@@ -95,26 +141,18 @@ with col_viz:
 
     # Path
     fig.add_trace(go.Scatter3d(x=path_x, y=path_y, z=path_z, mode='markers+lines',
-                               marker=dict(size=5, color='red'), line=dict(color='red', width=5), name='Path'))
+                               marker=dict(size=4, color='red'), line=dict(color='red', width=4), name='Path'))
 
-    fig.update_layout(title="Gradient Descent on J(w) = w1^2 + w2^2",
+    fig.update_layout(title=f"Optimization Path ({optimizer})",
                       scene=dict(xaxis_title='w1', yaxis_title='w2', zaxis_title='Loss'), height=600)
     st.plotly_chart(fig, use_container_width=True)
 
-# --- 7. Hyperparameters ---
-st.header("7. Hyperparameters & Behavior")
-st.markdown("""
-*   **Learning Rate ($\eta$)**:
-    *   **Too Small**: Tiny steps. Takes forever to reach the bottom.
-    *   **Too Large**: Huge steps. Might overshoot the bottom and diverge (explode).
-    *   **Just Right**: Converges quickly and stably.
-""")
-
 # --- 8. Super Summary ---
 st.header("8. Super Summary 🦸")
-st.info("""
-*   **Goal**: Find weights $w$ that minimize Loss $J(w)$.
-*   **Math**: $w \leftarrow w - \eta \nabla J$.
-*   **Key Insight**: Follow the slope downhill.
-*   **Knobs**: Learning Rate is the most critical parameter.
+st.info(r"""
+*   **Goal**: Find the bottom of the valley (Min Loss).
+*   **Gradient**: The compass pointing Uphill. We go opposite.
+*   **Learning Rate**: Step size. Too big = Explode. Too small = Slow.
+*   **Momentum**: Helps plow through flat areas and dampen oscillations.
+*   **SGD**: Fast, noisy updates. **Batch**: Slow, precise updates.
 """)

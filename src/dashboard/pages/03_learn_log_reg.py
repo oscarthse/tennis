@@ -19,7 +19,7 @@ Logistic Regression is a **Probabilistic Linear Classifier**. It predicts the pr
 **The Model Equation:**
 """)
 st.latex(r"P(y=1|x) = \sigma(w^T x + b) = \frac{1}{1 + e^{-(w^T x + b)}}")
-st.markdown("""
+st.markdown(r"""
 *   $x$: Input feature vector.
 *   $w$: Weight vector (Feature importance).
 *   $b$: Bias term (Intercept).
@@ -69,7 +69,7 @@ st.markdown("""
 To make it easier to optimize, we take the Negative Logarithm.
 """)
 st.latex(r"J(w) = - \frac{1}{N} \sum_{i=1}^N \left[ y_i \log(\hat{y}_i) + (1 - y_i) \log(1 - \hat{y}_i) \right]")
-st.markdown("""
+st.markdown(r"""
 *   **If $y=1$**: We want $\hat{y} \approx 1$. If $\hat{y} \approx 0$, $\log(\hat{y}) \to -\infty$, so Loss $\to \infty$.
 *   **If $y=0$**: We want $\hat{y} \approx 0$. If $\hat{y} \approx 1$, $\log(1-\hat{y}) \to -\infty$, so Loss $\to \infty$.
 """)
@@ -81,7 +81,7 @@ How do we find the best $w$? We use **Gradient Descent**.
 The derivative of the Log Loss with respect to weights is surprisingly simple:
 """)
 st.latex(r"\nabla_w J = \frac{1}{N} \sum_{i=1}^N (\hat{y}_i - y_i) x_i")
-st.markdown("""
+st.markdown(r"""
 *   **Error**: $(\hat{y} - y)$. The difference between prediction and reality.
 *   **Input**: $x$. The direction of the feature.
 *   **Update Rule**: $w \leftarrow w - \eta \cdot \text{Error} \cdot x$.

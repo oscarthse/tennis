@@ -70,19 +70,19 @@ with tab1:
     st.subheader("3. The Optimization Problem")
     st.markdown("We have two conflicting goals:")
     st.markdown("1.  **Maximize the Margin**: Make the road as wide as possible. (Minimize $||w||$).")
-    st.markdown("2.  **Respect the Data**: Keep points out of the No Man's Land. ($y_i(w^T x_i + b) \ge 1$).")
+    st.markdown(r"2.  **Respect the Data**: Keep points out of the No Man's Land. ($y_i(w^T x_i + b) \ge 1$).")
 
     st.markdown("**The Hard Margin Primal Problem:**")
     st.latex(r"\min_{w, b} \frac{1}{2} ||w||^2 \quad \text{subject to} \quad y_i (w^T x_i + b) \ge 1")
 
-    st.markdown("""
+    st.markdown(r"""
     *   **Why Minimize $||w||$?** Because Margin Width = $2/||w||$. To make the fraction big, the denominator must be small.
     *   **Why $\ge 1$?** We enforce that every point must be *at least* distance 1 away from the decision line (in score space).
     """)
 
     # --- 4. Deeper Components (Slack & Hinge Loss) ---
     st.subheader("4. Soft Margin & Hinge Loss")
-    st.markdown("""
+    st.markdown(r"""
     Real data is messy. Sometimes points *must* be inside the margin (or on the wrong side).
     We introduce **Slack Variables** ($\xi_i$).
 
@@ -104,7 +104,7 @@ with tab1:
 
     # --- 5. What the Solution Looks Like ---
     st.subheader("5. The Solution: Support Vectors")
-    st.markdown("""
+    st.markdown(r"""
     The magic of SVM is that the solution depends **only** on the difficult points.
 
     *   **Easy Points** (Safety $> 1$): $\xi = 0$. They don't matter. You can delete them and the line won't move.
@@ -180,7 +180,7 @@ with tab1:
 
     # --- 8. Super Summary ---
     st.subheader("8. Super Summary 🦸")
-    st.info("""
+    st.info(r"""
     *   **Goal**: Find the widest possible road (Margin) between classes.
     *   **Math**: Minimize $||w||^2$ subject to $y_i f(x_i) \ge 1$.
     *   **Key Insight**: Only the "Support Vectors" (points on the edge) define the line.
