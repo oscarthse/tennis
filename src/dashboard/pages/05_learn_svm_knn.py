@@ -104,9 +104,9 @@ with tab2:
     st.header("3. Structure: Hyperplanes and Margins")
     render_mermaid("""
     graph TD
-        Data["Data Points"] --> Separator["Hyperplane (Line)"]
-        Separator --> Margin["Margin (Gap)"]
-        Margin --> Optimization["Maximize Width"]
+        N1["Data Points"] --> N2["Hyperplane - Line"]
+        N2 --> N3["Margin - Gap"]
+        N3 --> N4["Maximize Width"]
     """, height=200)
     st.markdown("---")
 
@@ -118,7 +118,7 @@ with tab2:
     st.markdown("To **Maximize Distance**, we must **Minimize $||w||$**.")
 
     st.subheader("B. The Objective Function")
-    st.latex(r"J(w) = \frac{1}{2}||w||^2 + C \sum \max(0, 1 - y_i(w^T x_i + b))")
+    st.latex(r"J(w) = \frac{1}{2}||w||^2 + C \sum_{i=1}^N \max(0, 1 - y_i(w^T x_i + b))")
     st.markdown("""
     *   **Part 1**: Make the road wide ($||w||^2$).
     *   **Part 2**: Don't crash into buildings (Loss).

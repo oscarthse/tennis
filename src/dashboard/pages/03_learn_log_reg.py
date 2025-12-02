@@ -54,9 +54,9 @@ st.markdown("Logistic Regression is a machine with **three parts**:")
 
 render_mermaid("""
 graph LR
-    Input["Inputs (x) <br> [Rank, Points]"] -->|Dot Product| Score["Linear Score (z) <br> (-inf to +inf)"]
-    Score -->|Sigmoid Function| Prob["Probability (p) <br> (0 to 1)"]
-    Prob -->|Threshold (0.5)| Class["Prediction (y_hat) <br> (Win/Lose)"]
+    Input["Inputs (x) <br> Rank, Points"] -->|Dot Product| Score["Linear Score (z) <br> -inf to +inf"]
+    Score -->|Sigmoid Function| Prob["Probability (p) <br> 0 to 1"]
+    Prob -->|Threshold 0.5| Class["Prediction (y_hat) <br> Win/Lose"]
 
     style Score fill:#fff3e0
     style Prob fill:#e8f5e9
