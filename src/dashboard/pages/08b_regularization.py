@@ -20,15 +20,14 @@ st.markdown("**Elevator Pitch:** Prevent your model from \"memorizing\" the trai
 
 st.markdown("### Learning Outcomes")
 st.markdown("""
-*   Understand the difference between **Memorizing** (Overfitting) and **Learning** (Generalization).
-*   Learn how **L2 (Ridge)** acts like a rubber band to shrink weights.
-*   Learn how **L1 (Lasso)** acts like a budget to select features.
-*   Visualize the effect of the **C parameter** on the decision boundary.
+*   **Math**: Understand how L1 and L2 penalties modify the Loss Function.
+*   **Geometry**: Visualize the "Circle" vs "Diamond" constraints.
+*   **Code Quality**: Learn how to **Unit Test** your ML models to ensure regularization is actually working.
 """)
 
 # --- 1. Motivation ---
 st.header("1. Motivation: The \"Memorizing\" Player 🧠")
-st.markdown("""
+st.markdown(r"""
 Imagine two tennis players analyzing their opponent, **Roger**:
 
 1.  **Player A (The Learner)**: Notices that Roger hits a cross-court forehand 80% of the time when he is pulled wide.
@@ -40,10 +39,8 @@ Imagine two tennis players analyzing their opponent, **Roger**:
     *   *Result*: This rule worked perfectly *in the past match*, but it will fail miserably today.
 
 **Player B is Overfitting.** They have learned the *noise*, not the *signal*.
-""")
 
-st.subheader("The Math of Overfitting")
-st.markdown(r"""
+### The Math of Overfitting
 In Logistic Regression, we minimize the **Loss Function** $J(w, b)$.
 If we let the weights $w$ get infinitely large, the model can create incredibly complex, wiggly boundaries to fit every single outlier.
 
@@ -155,7 +152,6 @@ with col2:
     X, y = make_moons(n_samples=200, noise=noise, random_state=42)
 
     # Pipeline: Polynomial Features -> Scaler -> LogReg
-    # We need Polynomial features to show "wiggly" boundaries
     degree = 5
 
     if reg_type == "L1 (Lasso)":
@@ -187,7 +183,6 @@ with col2:
     st.pyplot(fig)
 
     # Show Coefficients
-    # Access the logistic regression step
     coefs = model.named_steps['logisticregression'].coef_.flatten()
     st.write(f"**Number of Features (Polynomial Degree {degree}):** {len(coefs)}")
     st.write(f"**Number of Non-Zero Weights:** {np.sum(np.abs(coefs) > 0.0001)}")
@@ -195,14 +190,87 @@ with col2:
     if reg_type == "L1 (Lasso)":
         st.caption("Notice how L1 drives many weights to exactly zero!")
 
-# --- 6. Summary & Quiz ---
-st.header("6. Summary & Quiz 📝")
+# --- 6. Engineering & DevOps ---
+st.header("6. Engineering & DevOps: Trust but Verify 🛠️")
+st.markdown("""
+In a production tennis analytics system, we don't just "hope" our regularization works. We **test** it.
+We treat ML code just like software code.
+""")
+
+st.subheader("Unit Testing ML Code")
+st.markdown("""
+We can use `pytest` to verify that our model behaves as expected.
+Here is how you would write a test to ensure that **Decreasing C (Increasing Penalty) actually shrinks the weights**.
+""")
+
+st.code("""
+# tests/test_regularization.py
+import pytest
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.datasets import make_classification
+
+def test_regularization_shrinks_weights():
+    \"\"\"
+    Verify that stronger regularization (lower C) results in smaller weight norms.
+    \"\"\"
+    # 1. Setup Data
+    X, y = make_classification(n_samples=100, n_features=20, random_state=42)
+
+    # 2. Train Weak Regularization Model (High C)
+    weak_reg_model = LogisticRegression(C=100.0)
+    weak_reg_model.fit(X, y)
+    weak_norm = np.linalg.norm(weak_reg_model.coef_)
+
+    # 3. Train Strong Regularization Model (Low C)
+    strong_reg_model = LogisticRegression(C=0.01)
+    strong_reg_model.fit(X, y)
+    strong_norm = np.linalg.norm(strong_reg_model.coef_)
+
+    # 4. Assert
+    # The weights of the strong model should be smaller (closer to zero)
+    assert strong_norm < weak_norm, "Strong regularization did not shrink weights!"
+    print(f"Weak Norm: {weak_norm:.2f}, Strong Norm: {strong_norm:.2f}")
+
+def test_l1_sparsity():
+    \"\"\"
+    Verify that L1 regularization produces more zero weights than L2.
+    \"\"\"
+    X, y = make_classification(n_samples=100, n_features=50, random_state=42)
+
+    # L1 Model
+    l1_model = LogisticRegression(penalty='l1', C=0.1, solver='liblinear')
+    l1_model.fit(X, y)
+    l1_zeros = np.sum(l1_model.coef_ == 0)
+
+    # L2 Model
+    l2_model = LogisticRegression(penalty='l2', C=0.1, solver='lbfgs')
+    l2_model.fit(X, y)
+    l2_zeros = np.sum(l2_model.coef_ == 0)
+
+    assert l1_zeros > l2_zeros, "L1 did not produce more sparsity than L2!"
+""", language="python")
+
+st.subheader("Linting & CI/CD")
+st.markdown("""
+*   **Linting**: Use tools like `ruff` or `pylint` to catch syntax errors and enforce style (e.g., PEP 8).
+*   **Formatting**: Use `black` to automatically format your code so it looks professional.
+*   **CI/CD (GitHub Actions)**:
+    *   Every time you push code to GitHub, a workflow should run:
+        1.  `pip install -r requirements.txt`
+        2.  `ruff check .` (Linting)
+        3.  `pytest` (Run the tests above)
+    *   If the tests fail, the PR cannot be merged. This prevents "silent failures" in your ML pipeline.
+""")
+
+# --- 7. Summary & Quiz ---
+st.header("7. Summary & Quiz 📝")
 st.markdown("""
 *   **Overfitting**: Memorizing noise.
 *   **Regularization**: Adding a penalty to the loss function to keep weights small.
 *   **L2 (Ridge)**: Squared penalty. Shrinks weights. Good default.
 *   **L1 (Lasso)**: Absolute penalty. Zeroes out weights. Feature Selection.
-*   **C**: Inverse of regularization strength. Low C = High Penalty.
+*   **DevOps**: Always write unit tests to verify your ML assumptions (e.g., "Does C actually shrink weights?").
 """)
 
 with st.expander("Quiz Question 1"):
@@ -210,5 +278,9 @@ with st.expander("Quiz Question 1"):
     st.markdown("**A:** **L1 (Lasso)**. It will drive the 9,980 useless features to zero, leaving you with the important ones.")
 
 with st.expander("Quiz Question 2"):
+    st.markdown("**Q: Why do we write unit tests for ML code?**")
+    st.markdown("**A:** To ensure that our mathematical assumptions hold true in practice and to prevent regressions when we change the code.")
+
+with st.expander("Quiz Question 3"):
     st.markdown("**Q: If I set C = 1,000,000, am I regularizing a lot or a little?**")
     st.markdown("**A:** **A little (or not at all)**. High C means Low Penalty. You are telling the model to trust the training data completely.")
