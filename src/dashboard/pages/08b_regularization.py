@@ -12,123 +12,157 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 from src.dashboard.components.navigation import sidebar_navigation
 
-st.set_page_config(page_title="Regularization (L1 & L2)", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="L1 & L2 Regularization", page_icon="🛡️", layout="wide")
 sidebar_navigation()
 
-st.title("🛡️ Regularization: The Art of Restraint (L1 & L2)")
-st.markdown("**Elevator Pitch:** Prevent your model from \"memorizing\" the training data by punishing it for being too complex.")
+st.title("🛡️ L1 (LASSO) and L2 (Ridge) Regularization")
+st.subheader("Mathematical Foundations and MLOps Verification")
+
+st.markdown("""
+**Elevator Pitch:** Regularization is the mathematical mechanism for controlling the **Bias-Variance Tradeoff**.
+By imposing a structured penalty on the model's complexity (weights), we prevent overfitting and ensure generalization to unseen data.
+""")
 
 st.markdown("### Learning Outcomes")
-st.markdown("""
-*   **Math**: Understand how L1 and L2 penalties modify the Loss Function.
-*   **Geometry**: Visualize the "Circle" vs "Diamond" constraints.
-*   **Code Quality**: Learn how to **Unit Test** your ML models to ensure regularization is actually working.
+st.markdown(r"""
+*   **Derivation**: Derive the exact gradient update rules for L2 (Weight Decay) and L1 (Soft Thresholding).
+*   **Geometry**: Visualize the optimization landscape using **Lagrange Multipliers** (Circle vs. Diamond).
+*   **Bias-Variance**: Deeply understand how $\lambda$ shifts the model from High Variance to High Bias.
+*   **Verification**: Learn how to write **Unit Tests** to mathematically verify that your regularization is functioning correctly in production.
 """)
 
-# --- 1. Motivation ---
-st.header("1. Motivation: The \"Memorizing\" Player 🧠")
+# --- 2. Motivation: Bias-Variance Deep Dive ---
+st.header("1. Motivation: The \"Memorizing\" Player (Bias-Variance Deep Dive) 🧠")
 st.markdown(r"""
-Imagine two tennis players analyzing their opponent, **Roger**:
+Let's revisit our tennis analogy with more rigor. We are trying to learn a function $f(x)$ that maps match conditions to the opponent's shot.
 
-1.  **Player A (The Learner)**: Notices that Roger hits a cross-court forehand 80% of the time when he is pulled wide.
-    *   *Rule*: "If Roger is wide -> Expect Cross-Court."
-    *   *Result*: Simple, robust, works in most matches.
+### The Tradeoff
+*   **Bias (Underfitting)**: The model is too simple. It assumes the opponent *always* hits cross-court, ignoring all other signals. It fails to capture the true underlying pattern.
+*   **Variance (Overfitting)**: The model is too complex. It learns a unique rule for every single point in history.
+    *   *Example*: "If opponent wears a green shirt AND wind is 5mph $\to$ Drop Shot."
+    *   This is **High Variance** because the model's decision boundary changes wildly with small fluctuations in the training data (noise).
 
-2.  **Player B (The Memorizer)**: Memorizes every single point from the last match.
-    *   *Rule*: "If Roger is wide, AND it's 30-15, AND he's wearing a green shirt, AND the wind is 5mph -> Expect Drop Shot."
-    *   *Result*: This rule worked perfectly *in the past match*, but it will fail miserably today.
+### The Unregularized Objective
+In standard Logistic Regression, we minimize the negative log-likelihood (Log Loss):
 
-**Player B is Overfitting.** They have learned the *noise*, not the *signal*.
+$$J(w, b) = -\frac{1}{n} \sum_{i=1}^n [y_i \log(\hat{y}_i) + (1-y_i) \log(1-\hat{y}_i)]$$
 
-### The Math of Overfitting
-In Logistic Regression, we minimize the **Loss Function** $J(w, b)$.
-If we let the weights $w$ get infinitely large, the model can create incredibly complex, wiggly boundaries to fit every single outlier.
-
-**Regularization** adds a "Penalty" term to the Loss function to keep the weights small.
+**The Danger**: If we minimize *only* this term, and we have high-dimensional features (e.g., polynomial expansion), the optimizer can drive $\|w\| \to \infty$ to fit every outlier perfectly.
 """)
 
-# --- 2. L2 Regularization ---
-st.header("2. L2 Regularization (Ridge) ⭕")
+# --- 3. L2 Regularization (Ridge) ---
+st.header("2. L2 Regularization (Ridge): The Weight Decay Mechanism ⭕")
 st.markdown(r"""
-**The Rubber Band.**
+**Formal Definition**: We add a penalty proportional to the **squared Euclidean norm** of the weights.
 
-We add the **Sum of Squared Weights** to the loss function.
-""")
-st.latex(r"J_{regularized}(w) = J(w) + \lambda \sum_{j=1}^n w_j^2")
-st.markdown(r"""
-*   **$\lambda$ (Lambda)**: The strength of the penalty.
-*   **Effect**: If a weight $w_j$ tries to grow large (e.g., 100), the penalty $100^2 = 10,000$ becomes huge. The model is forced to keep $w$ small.
+$$J_{\text{L2}}(w) = J(w) + \lambda \|w\|_2^2 = J(w) + \lambda \sum_{j=1}^d w_j^2$$
+
+*   **$\lambda$ (Lambda)**: The regularization strength (Hyperparameter).
+*   **Intuition**: This acts like a "Power Limiter". It allows the model to use weights to reduce error, but "taxes" large weights heavily.
 """)
 
-st.subheader("The Geometry: The Circle")
+st.subheader("The Complete Derivation (Step-by-Step)")
 st.markdown(r"""
-Imagine the Loss Function wants to go to the center (minimum error), but the Penalty holds it back like a leash.
-For L2, the constraint region is a **Circle** ($w_1^2 + w_2^2 \le C$).
+Let's look at the Gradient Descent update.
+Recall the gradient of the unregularized loss: $\nabla_w J$.
+
+**Step 1: Gradient of the Penalty**
+$$\frac{\partial}{\partial w_j} (\lambda \sum w_k^2) = 2\lambda w_j$$
+
+**Step 2: The Full Update Rule**
+$$w_{new} \leftarrow w_{old} - \eta (\nabla J + 2\lambda w_{old})$$
+
+**Step 3: Rearranging for Insight (Weight Decay)**
+$$w_{new} \leftarrow w_{old} - \eta \nabla J - 2\eta\lambda w_{old}$$
+$$w_{new} \leftarrow \underbrace{(1 - 2\eta\lambda)}_{\text{Shrinkage Factor}} w_{old} - \eta \nabla J$$
+
+**Key Insight**: The term $(1 - 2\eta\lambda)$ is slightly less than 1 (e.g., 0.99).
+In *every single step*, before the model learns from the data ($\nabla J$), it **shrinks** the existing weights towards zero.
+This is why L2 is mathematically identical to **Weight Decay**.
+""")
+
+st.subheader("Geometric Rigor: Lagrange Multipliers")
+st.markdown(r"""
+We can view this as a constrained optimization problem:
+**Minimize $J(w)$ subject to $\sum w_j^2 \le t$**.
+
+The optimal solution occurs where the **contours of the Loss Function** are **tangent** to the **Constraint Region**.
+For L2, the constraint $\sum w_j^2 \le t$ defines a **Circle** (or Hypersphere).
 """)
 st.markdown("`<img src='l2_circle.png'>`", unsafe_allow_html=True)
+st.caption("The elliptical loss contours touch the circular constraint. This rarely happens exactly at an axis, so weights are small but non-zero.")
 
-st.subheader("The Gradient Update")
+# --- 4. L1 Regularization (Lasso) ---
+st.header("3. L1 Regularization (Lasso): The Feature Selector 💎")
 st.markdown(r"""
-When we take the derivative, an extra term appears:
-""")
-st.latex(r"\frac{\partial}{\partial w} (\lambda w^2) = 2\lambda w")
-st.markdown(r"""
-The update rule becomes:
-""")
-st.latex(r"w \leftarrow w - \eta (\nabla J + 2\lambda w)")
-st.latex(r"w \leftarrow w(1 - 2\eta\lambda) - \eta \nabla J")
-st.markdown(r"""
-**Look closely!** Before updating based on the error, we multiply $w$ by $(1 - 2\eta\lambda)$.
-Since this is $< 1$, we are **shrinking** the weight at every step. This is why L2 is called **Weight Decay**.
+**Formal Definition**: We add a penalty proportional to the **L1 norm** (sum of absolute values).
+
+$$J_{\text{L1}}(w) = J(w) + \lambda \|w\|_1 = J(w) + \lambda \sum_{j=1}^d |w_j|$$
+
+**Intuition**: The "Minimalist Budget". It forces the model to spend its "weight budget" only on the most critical features.
 """)
 
-# --- 3. L1 Regularization ---
-st.header("3. L1 Regularization (Lasso) 💎")
+st.subheader("The Gradient and Sparsity")
 st.markdown(r"""
-**The Budget Cut.**
+The derivative of $|w|$ is not defined at 0. We use the **Subgradient**:
+$$ \text{sign}(w_j) = \begin{cases} 1 & w_j > 0 \\ -1 & w_j < 0 \\ [-1, 1] & w_j = 0 \end{cases} $$
 
-We add the **Sum of Absolute Weights** to the loss function.
+The gradient of the penalty is constant: $\pm \lambda$.
+Unlike L2, where the push gets smaller as $w \to 0$ (since $2\lambda w \to 0$), L1 pushes with **constant force** $\lambda$ all the way to zero.
+This leads to the **Soft Thresholding** effect, where weights effectively "snap" to zero.
 """)
-st.latex(r"J_{regularized}(w) = J(w) + \lambda \sum_{j=1}^n |w_j|")
 
-st.subheader("The Geometry: The Diamond")
+st.subheader("Geometric Rigor: The Diamond")
 st.markdown(r"""
-For L1, the constraint region is a **Diamond** ($|w_1| + |w_2| \le C$).
-The "contours" of the Loss function often hit the **corners** of the diamond first.
-At the corners, one of the weights is **exactly zero**.
+Constrained Optimization: **Minimize $J(w)$ subject to $\sum |w_j| \le t$**.
+The constraint $\sum |w_j| \le t$ defines a **Diamond** (or L1 Ball).
 """)
 st.markdown("`<img src='l1_diamond.png'>`", unsafe_allow_html=True)
+st.caption("The loss contours often hit the **corners** of the diamond first. At a corner, one or more coordinates are **exactly zero**. This is the geometric origin of **Sparsity**.")
 
-st.success("""
-**Key Takeaway:** L1 Regularization can set weights to **Zero**. It performs **Feature Selection**.
-It says: "This tennis stat is useless. Ignore it completely."
-""")
+# --- 5. Practical Implementation & MLOps ---
+st.header("4. Practical Implementation & MLOps Verification 🛠️")
 
-# --- 4. Comparison ---
-st.header("4. L1 vs L2: The Showdown 🥊")
 st.markdown("""
 | Feature | L2 (Ridge) | L1 (Lasso) |
 | :--- | :--- | :--- |
 | **Penalty** | Squared ($w^2$) | Absolute ($|w|$) |
-| **Geometry** | Circle ⭕ | Diamond 💎 |
-| **Effect** | Shrinks weights to near-zero | Sets weights to exactly zero |
-| **Use Case** | Default choice. Prevents overfitting. | Feature Selection. Sparse models. |
+| **Shrinkage** | Proportional to weight | Constant force |
+| **Result** | Small, dense weights | Sparse weights (Zeros) |
+| **Use Case** | Default for performance | Feature Selection / Interpretability |
 """)
 
-st.warning(r"""
-**⚠️ The Scikit-Learn Trap**
-
-In theory, we use $\lambda$ (Lambda) for penalty strength.
-In `sklearn`, we use **`C`**.
-
-$$C = \frac{1}{\lambda}$$
-
-*   **High C** = Low Lambda = **Weak Regularization** (Trust the data).
-*   **Low C** = High Lambda = **Strong Regularization** (Trust the prior/penalty).
+st.subheader("Code Quality & Verification")
+st.markdown("""
+In a professional MLOps environment, we do not trust "theoretical" regularization. We verify it with automated tests.
 """)
 
-# --- 5. Interactive Playground ---
-st.header("5. Interactive Playground 🎮")
+st.markdown("**1. Unit Testing (Pytest)**")
+st.markdown("We write tests to assert the mathematical properties of our model.")
+st.code("""
+# tests/test_regularization.py (Excerpt)
+
+def test_regularization_shrinks_weights():
+    # Train High C (Weak Reg) vs Low C (Strong Reg)
+    # Assert that Strong Reg norm is < 50% of Weak Reg norm
+    assert reduction_ratio < 0.5
+
+def test_l1_sparsity():
+    # Train L1 vs L2
+    # Assert L1 has more zero coefficients
+    assert l1_zeros > l2_zeros
+""", language="python")
+
+st.markdown("**2. CI/CD Integration**")
+st.markdown("""
+These tests should run automatically in your **CI/CD Pipeline** (e.g., GitHub Actions).
+*   **Trigger**: On every `git push`.
+*   **Action**: Run `pytest`.
+*   **Blocker**: If `test_regularization_shrinks_weights` fails, the code is rejected. This prevents you from accidentally deploying a model where regularization is broken (e.g., by passing the wrong argument).
+""")
+
+# --- Interactive Playground ---
+st.header("5. Interactive Verification 🎮")
 
 col1, col2 = st.columns([1, 3])
 
@@ -139,148 +173,51 @@ with col1:
     noise = st.slider("Noise Level", 0.0, 1.0, 0.3)
 
     st.markdown("---")
-    st.markdown("**Interpretation**")
     if c_val < 0.1:
-        st.info("Strong Regularization. The model is very simple (maybe too simple).")
+        st.info("High Bias Zone (Underfitting)")
     elif c_val > 100:
-        st.error("Weak Regularization. The model is overfitting (wiggly).")
+        st.error("High Variance Zone (Overfitting)")
     else:
-        st.success("Balanced Regularization.")
+        st.success("Balanced Zone")
 
 with col2:
-    # Generate Data
     X, y = make_moons(n_samples=200, noise=noise, random_state=42)
-
-    # Pipeline: Polynomial Features -> Scaler -> LogReg
-    degree = 5
 
     if reg_type == "L1 (Lasso)":
         clf = LogisticRegression(C=c_val, penalty='l1', solver='liblinear', max_iter=1000)
     else:
         clf = LogisticRegression(C=c_val, penalty='l2', solver='lbfgs', max_iter=1000)
 
-    model = make_pipeline(
-        PolynomialFeatures(degree=degree),
-        StandardScaler(),
-        clf
-    )
-
+    model = make_pipeline(PolynomialFeatures(degree=5), StandardScaler(), clf)
     model.fit(X, y)
 
     # Plotting
     x_min, x_max = X[:, 0].min() - 0.5, X[:, 0].max() + 0.5
     y_min, y_max = X[:, 1].min() - 0.5, X[:, 1].max() + 0.5
     xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.02), np.arange(y_min, y_max, 0.02))
-
-    Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
-    Z = Z.reshape(xx.shape)
+    Z = model.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
 
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.contourf(xx, yy, Z, alpha=0.3, cmap='coolwarm')
     ax.scatter(X[:, 0], X[:, 1], c=y, cmap='coolwarm', edgecolors='k')
     ax.set_title(f"Decision Boundary (C={c_val}, {reg_type})")
-
     st.pyplot(fig)
 
-    # Show Coefficients
     coefs = model.named_steps['logisticregression'].coef_.flatten()
-    st.write(f"**Number of Features (Polynomial Degree {degree}):** {len(coefs)}")
-    st.write(f"**Number of Non-Zero Weights:** {np.sum(np.abs(coefs) > 0.0001)}")
+    st.write(f"**Non-Zero Weights:** {np.sum(np.abs(coefs) > 0.0001)} / {len(coefs)}")
 
-    if reg_type == "L1 (Lasso)":
-        st.caption("Notice how L1 drives many weights to exactly zero!")
-
-# --- 6. Engineering & DevOps ---
-st.header("6. Engineering & DevOps: Trust but Verify 🛠️")
-st.markdown("""
-In a production tennis analytics system, we don't just "hope" our regularization works. We **test** it.
-We treat ML code just like software code.
+# --- 6. Summary & Assessment ---
+st.header("6. Summary & Assessment 📝")
+st.markdown(r"""
+*   **L2 (Ridge)**: Adds $\lambda \sum w^2$. Shrinks weights via $(1-2\eta\lambda)$ factor. Use for preventing overfitting while keeping all features.
+*   **L1 (Lasso)**: Adds $\lambda \sum |w|$. Snaps weights to zero via constant gradient. Use for feature selection.
+*   **MLOps**: Verification is key. Use unit tests to prove your regularization is active.
 """)
 
-st.subheader("Unit Testing ML Code")
-st.markdown("""
-We can use `pytest` to verify that our model behaves as expected.
-Here is how you would write a test to ensure that **Decreasing C (Increasing Penalty) actually shrinks the weights**.
-""")
+with st.expander("Mastery Question 1"):
+    st.markdown(r"**Q: Derive the shrinkage factor for L2 if $\eta=0.01$ and $\lambda=1.5$.**")
+    st.markdown(r"**A:** The factor is $(1 - 2\eta\lambda) = 1 - 2(0.01)(1.5) = 1 - 0.03 = \mathbf{0.97}$. The weights shrink by 3% per step.")
 
-st.code("""
-# tests/test_regularization.py
-import pytest
-import numpy as np
-from sklearn.linear_model import LogisticRegression
-from sklearn.datasets import make_classification
-
-def test_regularization_shrinks_weights():
-    \"\"\"
-    Verify that stronger regularization (lower C) results in smaller weight norms.
-    \"\"\"
-    # 1. Setup Data
-    X, y = make_classification(n_samples=100, n_features=20, random_state=42)
-
-    # 2. Train Weak Regularization Model (High C)
-    weak_reg_model = LogisticRegression(C=100.0)
-    weak_reg_model.fit(X, y)
-    weak_norm = np.linalg.norm(weak_reg_model.coef_)
-
-    # 3. Train Strong Regularization Model (Low C)
-    strong_reg_model = LogisticRegression(C=0.01)
-    strong_reg_model.fit(X, y)
-    strong_norm = np.linalg.norm(strong_reg_model.coef_)
-
-    # 4. Assert
-    # The weights of the strong model should be smaller (closer to zero)
-    assert strong_norm < weak_norm, "Strong regularization did not shrink weights!"
-    print(f"Weak Norm: {weak_norm:.2f}, Strong Norm: {strong_norm:.2f}")
-
-def test_l1_sparsity():
-    \"\"\"
-    Verify that L1 regularization produces more zero weights than L2.
-    \"\"\"
-    X, y = make_classification(n_samples=100, n_features=50, random_state=42)
-
-    # L1 Model
-    l1_model = LogisticRegression(penalty='l1', C=0.1, solver='liblinear')
-    l1_model.fit(X, y)
-    l1_zeros = np.sum(l1_model.coef_ == 0)
-
-    # L2 Model
-    l2_model = LogisticRegression(penalty='l2', C=0.1, solver='lbfgs')
-    l2_model.fit(X, y)
-    l2_zeros = np.sum(l2_model.coef_ == 0)
-
-    assert l1_zeros > l2_zeros, "L1 did not produce more sparsity than L2!"
-""", language="python")
-
-st.subheader("Linting & CI/CD")
-st.markdown("""
-*   **Linting**: Use tools like `ruff` or `pylint` to catch syntax errors and enforce style (e.g., PEP 8).
-*   **Formatting**: Use `black` to automatically format your code so it looks professional.
-*   **CI/CD (GitHub Actions)**:
-    *   Every time you push code to GitHub, a workflow should run:
-        1.  `pip install -r requirements.txt`
-        2.  `ruff check .` (Linting)
-        3.  `pytest` (Run the tests above)
-    *   If the tests fail, the PR cannot be merged. This prevents "silent failures" in your ML pipeline.
-""")
-
-# --- 7. Summary & Quiz ---
-st.header("7. Summary & Quiz 📝")
-st.markdown("""
-*   **Overfitting**: Memorizing noise.
-*   **Regularization**: Adding a penalty to the loss function to keep weights small.
-*   **L2 (Ridge)**: Squared penalty. Shrinks weights. Good default.
-*   **L1 (Lasso)**: Absolute penalty. Zeroes out weights. Feature Selection.
-*   **DevOps**: Always write unit tests to verify your ML assumptions (e.g., "Does C actually shrink weights?").
-""")
-
-with st.expander("Quiz Question 1"):
-    st.markdown("**Q: I have a dataset with 10,000 features, but I suspect only 20 are important. Which regularization should I use?**")
-    st.markdown("**A:** **L1 (Lasso)**. It will drive the 9,980 useless features to zero, leaving you with the important ones.")
-
-with st.expander("Quiz Question 2"):
-    st.markdown("**Q: Why do we write unit tests for ML code?**")
-    st.markdown("**A:** To ensure that our mathematical assumptions hold true in practice and to prevent regressions when we change the code.")
-
-with st.expander("Quiz Question 3"):
-    st.markdown("**Q: If I set C = 1,000,000, am I regularizing a lot or a little?**")
-    st.markdown("**A:** **A little (or not at all)**. High C means Low Penalty. You are telling the model to trust the training data completely.")
+with st.expander("Mastery Question 2"):
+    st.markdown("**Q: Why does L1 lead to sparsity while L2 does not?**")
+    st.markdown(r"**A:** Geometrically, the L1 'Diamond' has corners where the solution is likely to land. Mathematically, the L1 gradient is constant ($\pm \lambda$) even as $w \to 0$, pushing it all the way to zero, whereas the L2 gradient ($2\lambda w$) vanishes as $w \to 0$.")
