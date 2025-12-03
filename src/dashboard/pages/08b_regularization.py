@@ -88,8 +88,7 @@ We can view this as a constrained optimization problem:
 The optimal solution occurs where the **contours of the Loss Function** are **tangent** to the **Constraint Region**.
 For L2, the constraint $\sum w_j^2 \le t$ defines a **Circle** (or Hypersphere).
 """)
-st.markdown("`<img src='l2_circle.png'>`", unsafe_allow_html=True)
-st.caption("The elliptical loss contours touch the circular constraint. This rarely happens exactly at an axis, so weights are small but non-zero.")
+st.image(os.path.join(os.path.dirname(__file__), "l2_circle.png"), caption="The elliptical loss contours touch the circular constraint. This rarely happens exactly at an axis, so weights are small but non-zero.")
 
 # --- 4. L1 Regularization (Lasso) ---
 st.header("3. L1 Regularization (Lasso): The Feature Selector 💎")
@@ -116,8 +115,7 @@ st.markdown(r"""
 Constrained Optimization: **Minimize $J(w)$ subject to $\sum |w_j| \le t$**.
 The constraint $\sum |w_j| \le t$ defines a **Diamond** (or L1 Ball).
 """)
-st.markdown("`<img src='l1_diamond.png'>`", unsafe_allow_html=True)
-st.caption("The loss contours often hit the **corners** of the diamond first. At a corner, one or more coordinates are **exactly zero**. This is the geometric origin of **Sparsity**.")
+st.image(os.path.join(os.path.dirname(__file__), "l1_diamond.png"), caption="The loss contours often hit the **corners** of the diamond first. At a corner, one or more coordinates are **exactly zero**. This is the geometric origin of **Sparsity**.")
 
 # --- 5. Practical Implementation & MLOps ---
 st.header("4. Practical Implementation 🛠️")
