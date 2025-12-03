@@ -16,6 +16,7 @@ def sidebar_navigation():
     st.sidebar.page_link("pages/06_optimization.py", label="5. Gradient Descent", icon="📉")
     st.sidebar.page_link("pages/07_validation_metrics.py", label="6. Metrics & Validation", icon="✅")
     st.sidebar.page_link("pages/08_hyperparameters.py", label="7. Hyperparameters", icon="🎛️")
+    st.sidebar.page_link("pages/08b_regularization.py", label="7b. Regularization (L1/L2)", icon="🛡️")
     st.sidebar.page_link("pages/09_class_imbalance.py", label="8. Class Imbalance", icon="⚖️")
     st.sidebar.page_link("pages/10_model_comparison.py", label="9. Model Comparison", icon="⚔️")
 

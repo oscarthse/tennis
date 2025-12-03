@@ -11,7 +11,7 @@ from src.dashboard.components.navigation import sidebar_navigation
 from src.dashboard.components.mermaid import render_mermaid
 from src.dashboard.components.toy_datasets import generate_moons, generate_circles
 
-.st.set_page_config(page_title="Trees & Forests", page_icon="🌳", layout="wide")
+st.set_page_config(page_title="Trees & Forests", page_icon="🌳", layout="wide")
 sidebar_navigation()
 
 st.title("🌳 Decision Trees & Random Forests: The Logic of Learning")
