@@ -16,7 +16,7 @@ st.title("📈 Logistic Regression: The Foundation")
 
 # --- 1. Core Model Definition ---
 st.header("1. Core Model Definition")
-st.markdown("""
+st.markdown(r"""
 Logistic Regression is a **Probabilistic Linear Classifier**. It predicts the probability $P(y=1|x)$ that an instance belongs to the positive class.
 
 **The Model Equation:**
@@ -31,7 +31,7 @@ st.markdown(r"""
 
 # --- 2. Geometry / Structure ---
 st.header("2. Geometry: The Linear Boundary")
-st.markdown("""
+st.markdown(r"""
 Although the output is a curve (S-shape), the **Decision Boundary** is a straight line (or hyperplane).
 
 **Why?**
@@ -39,7 +39,7 @@ We predict Class 1 if $P > 0.5$.
 This happens exactly when the input to the sigmoid is positive:
 """)
 st.latex(r"w^T x + b > 0")
-st.markdown("""
+st.markdown(r"""
 This equation $w^T x + b = 0$ defines a **Hyperplane** that cuts the space in two.
 *   **One side**: Probability $> 0.5$ (Win).
 *   **Other side**: Probability $< 0.5$ (Lose).
@@ -120,7 +120,7 @@ This explains *why* the sigmoid function is used. It's the natural consequence o
 
 # --- 4. Constraints / Objective / Loss ---
 st.header("4. The Optimization Problem")
-st.markdown("""
+st.markdown(r"""
 We cannot use "Least Squares" (MSE) because it assumes errors are Gaussian (they are not; they are binary).
 We use **Maximum Likelihood Estimation (MLE)**.
 
@@ -129,7 +129,7 @@ Find $w, b$ that maximize the probability of the observed data.
 """)
 st.latex(r"\text{Likelihood} = \prod_{i=1}^N P(y_i | x_i; w)")
 
-st.markdown("""
+st.markdown(r"""
 **The Loss Function (Log Loss / Cross-Entropy):**
 To make it easier to optimize, we take the Negative Logarithm.
 """)
@@ -141,7 +141,7 @@ st.markdown(r"""
 
 # --- 5. Deeper Components (Gradient) ---
 st.header("5. The Gradient Update")
-st.markdown("""
+st.markdown(r"""
 How do we find the best $w$? We use **Gradient Descent**.
 The derivative of the Log Loss with respect to weights is surprisingly simple:
 """)
@@ -155,11 +155,11 @@ st.markdown(r"""
 
 # --- 6. What the Solution Looks Like ---
 st.header("6. The Solution: Interpreting Weights")
-st.markdown("""
+st.markdown(r"""
 What does the model actually learn? It learns the **Log-Odds** of the positive class.
 """)
 st.latex(r"\ln \left( \frac{P(y=1)}{P(y=0)} \right) = w^T x + b")
-st.markdown("""
+st.markdown(r"""
 *   If $w_1 = 2.0$: Increasing $x_1$ by 1 unit increases the **Log-Odds** of winning by 2.0.
 *   This means the **Odds** increase by factor $e^2 \approx 7.4$.
 *   This makes Logistic Regression highly **Interpretable**.
@@ -233,7 +233,7 @@ print(f"Bias: {model.intercept_}")
 
 # --- 9. Hyperparameters & Behavior ---
 st.header("9. Hyperparameters & Behavior")
-st.markdown("""
+st.markdown(r"""
 *   **C (Inverse Regularization)**:
     *   **High C**: Weak regularization. Model trusts training data more. Can overfit.
     *   **Low C**: Strong regularization. Pushes weights $w$ towards zero. Simpler model.
@@ -242,7 +242,7 @@ st.markdown("""
 
 # --- 10. Super Summary ---
 st.header("10. Super Summary 🦸")
-st.info("""
+st.info(r"""
 *   **Goal**: Estimate probability of class 1.
 *   **Math**: Minimize Log Loss (Cross-Entropy).
 *   **Key Insight**: It's a linear model wrapped in a sigmoid.
